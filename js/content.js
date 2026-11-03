@@ -24,41 +24,41 @@ const CONFIG = {
    options   : glasses, mustache, beard, tie, vest, scale                */
 const CHARS = {
   // ---- Le héros ----
-  hero:     { name: CONFIG.hero, skin: '#f0c8a0', hair: '#e8e8e8', hairStyle: 'short', top: '#f4f4f4', stripes: '#2f6db5', collar: '#2f6db5', bottom: '#2c3440', badge: '#e0a030' },
+  hero:     { name: CONFIG.hero, skin: '#f0c8a0', hair: '#e8e8e8', hairStyle: 'short', top: '#f4f4f4', stripes: '#2f6db5', collar: '#2f6db5', bottom: '#2c3440', badge: '#d6402f' },
   // ---- Le Chef (grand, chauve, chemise) ----
-  chef:     { name: 'Le Chef', skin: '#e8b890', hair: '#6b5a4a', hairStyle: 'bald', top: '#bcd4ea', collar: '#ffffff', bottom: '#2c3440', scale: 1.15, pocket: true },
+  chef:     { name: 'Le Chef', skin: '#e8b890', hair: '#6b5a4a', hairStyle: 'bald', top: '#bcd4ea', collar: '#ffffff', bottom: '#2c3440', scale: 1.15, pocket: true, badge: '#2f7fd1' },
   // ---- Delivery Team (nom, métier) ----
   coline:   { name: 'Coline',   skin: '#f0c8a8', hair: '#5a3020', hairStyle: 'long',  top: '#2f3a4f', bottom: '#2c3440', badge: '#2f7fd1', lips: '#c0392b', lashes: true, earring: '#e0b030' },                       // Manager Delivery
-  amelie:   { name: 'Amélie',   skin: '#f6d2b4', hair: '#f08a2a', hairStyle: 'long',  top: '#f2e6d8', bottom: '#3a3a52', badge: '#2f7fd1', lips: '#e05a6a', lashes: true, earring: '#f2f2f2' },                       // Appui Management
-  sheryna:  { name: 'Sheryna',  skin: '#e8bc98', hair: '#3a2418', hairStyle: 'long',  top: '#3d8f6a', bottom: '#2c3440', badge: '#2f7fd1', lips: '#b03a48', lashes: true, earring: '#e0b030' },                       // Coordinatrice CAC
-  youssef:  { name: 'Youssef',  skin: '#d9a77e', hair: '#1c1410', hairStyle: 'short', top: '#6a4aa0', bottom: '#2c3440', beard: true, badge: '#2f7fd1' },          // Configuration Manager
-  imen:     { name: 'Imen',     skin: '#efc4a4', hair: '#9a5a38', hairStyle: 'bun',   top: '#b84a4a', bottom: '#3a3a52', badge: '#2f7fd1', lips: '#c0392b', lashes: true, earring: '#e0b030' },                       // PMO
+  amelie:   { name: 'Amélie',   skin: '#f6d2b4', hair: '#f08a2a', hairStyle: 'long',  top: '#f2e6d8', bottom: '#3a3a52', badge: '#d6402f', lips: '#e05a6a', lashes: true, earring: '#f2f2f2' },                       // Appui Management
+  sheryna:  { name: 'Sheryna',  skin: '#e8bc98', hair: '#3a2418', hairStyle: 'long',  top: '#3d8f6a', bottom: '#2c3440', badge: '#d6402f', lips: '#b03a48', lashes: true, earring: '#e0b030' },                       // Coordinatrice CAC
+  youssef:  { name: 'Youssef',  skin: '#d9a77e', hair: '#1c1410', hairStyle: 'short', top: '#6a4aa0', bottom: '#2c3440', beard: true, badge: '#d6402f' },          // Configuration Manager
+  imen:     { name: 'Imen',     skin: '#efc4a4', hair: '#9a5a38', hairStyle: 'bun',   top: '#b84a4a', bottom: '#3a3a52', badge: '#d6402f', lips: '#c0392b', lashes: true, earring: '#e0b030' },                       // PMO
   cecile:   { name: 'Cécile',   skin: '#f2cfae', hair: '#b88a58', hairStyle: 'long',  top: '#262626', bottom: '#3a3a52', badge: '#2f7fd1', lips: '#d0505a', lashes: true },                       // Delivery Manager
-  franck:   { name: 'Franck',   skin: '#f0c8a0', hair: '#8a8f94', hairStyle: 'short', top: '#3aa0b0', bottom: '#2c3440', glasses: true, badge: '#2f7fd1' },         // Delivery Manager
-  danila:   { name: 'Danila',   skin: '#8a5a3c', hair: '#1c1410', hairStyle: 'curly', top: '#a8323a', bottom: '#2c3440', badge: '#2f7fd1', lips: '#8a2b3a', lashes: true, earring: '#d4af37', hoop: true },                       // Responsable Qualité
-  hakim:    { name: 'Hakim',    skin: '#d2a07a', hair: '#1c1410', hairStyle: 'short', top: '#1f1f26', bottom: '#2c3440', beard: true, badge: '#2f7fd1' },          // Expert IA
-  matthieu: { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'short', top: '#4a78b0', bottom: '#2c3440', beard: true, badge: '#2f7fd1' },          // Release Train Engineer
-  arno:     { name: 'Arno',     skin: '#e8bc98', hair: '#8a8f94', hairStyle: 'short', top: '#7a7f86', bottom: '#2c3440', glasses: true, beard: true, badge: '#2f7fd1', glassShape: 'rect', glassColor: '#b5651d' }, // Chef de projet Agile
-  justine:  { name: 'Justine',  skin: '#efc4a4', hair: '#c49a58', hairStyle: 'curly', top: '#c9a24a', bottom: '#2c3440', badge: '#2f7fd1', lips: '#c0392b', lashes: true, earring: '#e0b030', spots: '#5a3a1a' },                       // Appui RTE
-  sandie:   { name: 'Sandie',   skin: '#f0c8a8', hair: '#5a3a28', hairStyle: 'long',  top: '#b8a8b0', bottom: '#3a3a52', badge: '#2f7fd1', lips: '#c0505a', lashes: true },                       // Change Manager
+  franck:   { name: 'Franck',   skin: '#f0c8a0', hair: '#8a8f94', hairStyle: 'short', top: '#3aa0b0', bottom: '#2c3440', glasses: true, badge: '#d6402f' },         // Delivery Manager
+  danila:   { name: 'Danila',   skin: '#8a5a3c', hair: '#1c1410', hairStyle: 'curly', top: '#a8323a', bottom: '#2c3440', badge: '#d6402f', lips: '#8a2b3a', lashes: true, earring: '#d4af37', hoop: true },                       // Responsable Qualité
+  hakim:    { name: 'Hakim',    skin: '#d2a07a', hair: '#1c1410', hairStyle: 'short', top: '#1f1f26', bottom: '#2c3440', beard: true, badge: '#d6402f' },          // Expert IA
+  matthieu: { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'short', top: '#4a78b0', bottom: '#2c3440', beard: true, badge: '#d6402f' },          // Release Train Engineer
+  arno:     { name: 'Arno',     skin: '#e8bc98', hair: '#8a8f94', hairStyle: 'short', top: '#7a7f86', bottom: '#2c3440', glasses: true, beard: true, badge: '#d6402f', glassShape: 'rect', glassColor: '#b5651d' }, // Chef de projet Agile
+  justine:  { name: 'Justine',  skin: '#efc4a4', hair: '#c49a58', hairStyle: 'curly', top: '#c9a24a', bottom: '#2c3440', badge: '#d6402f', lips: '#c0392b', lashes: true, earring: '#e0b030', spots: '#5a3a1a' },                       // Appui RTE
+  sandie:   { name: 'Sandie',   skin: '#f0c8a8', hair: '#5a3a28', hairStyle: 'long',  top: '#b8a8b0', bottom: '#3a3a52', badge: '#d6402f', lips: '#c0505a', lashes: true },                       // Change Manager
   bastien:  { name: 'Bastien',  skin: '#e8bc98', hair: '#e8bc98', hairStyle: 'bald',  top: '#3a4660', bottom: '#2c3440', beard: true, badge: '#2f7fd1', headset: true },          // Incident Manager
-  olivier:  { name: 'Olivier',  skin: '#f0c8a0', hair: '#c4682a', hairStyle: 'bun',   top: '#4b7a9a', bottom: '#2c3440', beard: true, badge: '#2f7fd1' },          // Référent SPICE
+  olivier:  { name: 'Olivier',  skin: '#f0c8a0', hair: '#c4682a', hairStyle: 'bun',   top: '#4b7a9a', bottom: '#2c3440', beard: true, badge: '#d6402f' },          // Référent SPICE
 };
 // ---- La cyber (à trouver pendant la crise) ----
-CHARS.lionel  = { name: 'Lionel Bateau',  skin: '#f0c8a0', hair: '#f2f2f2', hairStyle: 'short', top: '#7a8fa6', bottom: '#3a3a46', badge: '#2f7fd1' };                         // MOA Cyber
-CHARS.vincent = { name: 'Vincent Trauma', skin: '#f2cfae', hair: '#4a2e1a', hairStyle: 'short', top: '#4a6f8a', bottom: '#2c3440', glasses: true, badge: '#2f7fd1' };   // Cyber, process COSUR
-CHARS.damien  = { name: 'Damien Croix', skin: '#e8bfa0', hair: '#ffffff', hairStyle: 'short', top: '#a9794a', bottom: '#5a5a6a', socks: '#8a3fb8', badge: '#2f7fd1' };   // Cyber, tournoi de belote
+CHARS.lionel  = { name: 'Lionel Bateau',  skin: '#f0c8a0', hair: '#f2f2f2', hairStyle: 'short', top: '#7a8fa6', bottom: '#3a3a46', badge: '#d6402f' };                         // MOA Cyber
+CHARS.vincent = { name: 'Vincent Trauma', skin: '#f2cfae', hair: '#4a2e1a', hairStyle: 'short', top: '#4a6f8a', bottom: '#2c3440', glasses: true, badge: '#d6402f' };   // Cyber, process COSUR
+CHARS.damien  = { name: 'Damien Croix', skin: '#e8bfa0', hair: '#ffffff', hairStyle: 'short', top: '#a9794a', bottom: '#5a5a6a', socks: '#8a3fb8', badge: '#d6402f' };   // Cyber, tournoi de belote
 // ---- Matthieu déguisé en lapin (Dernier PI) ----
-CHARS.lapin = { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'short', top: '#f6f6f6', bottom: '#f6f6f6', shoe: '#f4a6b8', beard: true, bunny: '#ffffff', badge: '#f4a6b8' };
+CHARS.lapin = { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'short', top: '#f6f6f6', bottom: '#f6f6f6', shoe: '#f4a6b8', beard: true, bunny: '#ffffff', badge: '#d6402f' };
 // ---- Matthieu en cowboy (fête de départ) ----
-CHARS.cowboy = { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'cowboy', top: '#a0522d', vest: '#6b3a1e', collar: '#d6402f', bottom: '#3a4a7a', shoe: '#5a3a1e', beard: true, badge: '#f0c040' };
+CHARS.cowboy = { name: 'Matthieu', skin: '#e8bc98', hair: '#1c1410', hairStyle: 'cowboy', top: '#a0522d', vest: '#6b3a1e', collar: '#d6402f', bottom: '#3a4a7a', shoe: '#5a3a1e', beard: true, badge: '#d6402f' };
 // ---- Les chefs de la cellule de crise (salle Mozart) ----
-CHARS.boss1 = { name: 'Chef', skin: '#e3b088', hair: '#555555', hairStyle: 'bald', top: '#1f2a44', bottom: '#1f2a44', tie: '#b3261e', glasses: true, scale: 1.05 };
-CHARS.boss2 = { name: 'Chef', skin: '#f0c8a0', hair: '#9aa0a6', hairStyle: 'short', top: '#e8e8ef', bottom: '#2c3440', tie: '#2f6db5', mustache: true };
-CHARS.boss3 = { name: 'Chef', skin: '#d9a77e', hair: '#1c1410', hairStyle: 'short', top: '#3a3f4a', bottom: '#2c3440', tie: '#e0a030', glasses: true };
-CHARS.boss4 = { name: 'Cheffe', skin: '#f2c9a5', hair: '#6b3a22', hairStyle: 'bun', top: '#7a3a5a', bottom: '#2c3440' };
-CHARS.boss5 = { name: 'Chef', skin: '#c68e63', hair: '#1c1410', hairStyle: 'curly', top: '#2a5a4a', bottom: '#2c3440', tie: '#ffffff', beard: true };
-CHARS.boss6 = { name: 'Cheffe', skin: '#efc4a4', hair: '#c49a58', hairStyle: 'long', top: '#2f3a4f', bottom: '#2c3440' };
+CHARS.boss1 = { name: 'Chef', skin: '#e3b088', hair: '#555555', hairStyle: 'bald', top: '#1f2a44', bottom: '#1f2a44', tie: '#b3261e', glasses: true, scale: 1.05, badge: '#2f7fd1' };
+CHARS.boss2 = { name: 'Chef', skin: '#f0c8a0', hair: '#9aa0a6', hairStyle: 'short', top: '#e8e8ef', bottom: '#2c3440', tie: '#2f6db5', mustache: true, badge: '#2f7fd1' };
+CHARS.boss3 = { name: 'Chef', skin: '#d9a77e', hair: '#1c1410', hairStyle: 'short', top: '#3a3f4a', bottom: '#2c3440', tie: '#e0a030', glasses: true, badge: '#2f7fd1' };
+CHARS.boss4 = { name: 'Cheffe', skin: '#f2c9a5', hair: '#6b3a22', hairStyle: 'bun', top: '#7a3a5a', bottom: '#2c3440', badge: '#2f7fd1' };
+CHARS.boss5 = { name: 'Chef', skin: '#c68e63', hair: '#1c1410', hairStyle: 'curly', top: '#2a5a4a', bottom: '#2c3440', tie: '#ffffff', beard: true, badge: '#2f7fd1' };
+CHARS.boss6 = { name: 'Cheffe', skin: '#efc4a4', hair: '#c49a58', hairStyle: 'long', top: '#2f3a4f', bottom: '#2c3440', badge: '#2f7fd1' };
 // Anciens rôles de l'histoire -> vrais collègues (à ajuster scène par scène)
 CHARS.sophie = CHARS.cecile; CHARS.karim = CHARS.youssef;
 CHARS.nadia = CHARS.danila; CHARS.julien = CHARS.bastien;
@@ -806,6 +806,18 @@ CUTS.j0_fin = {
     yield c.wait(1);
     yield c.fade(1, 1.2);
     yield c.card('FIN', 'Bonne retraite, ' + CONFIG.hero + ' !', 3.2);
+  },
+};
+
+/* Casting : tous les personnages alignés (hors histoire, pour vérifier les skins).
+   Voir : test/shot.html#cut/casting/2 */
+CUTS.casting = {
+  type: 'cutscene', bg: 'bar',
+  script: function* (c) {
+    const keys = Object.keys(CHARS).filter(k => !['sophie', 'karim', 'nadia', 'julien'].includes(k) && !k.startsWith('boss') && k !== 'lapin' && k !== 'cowboy');
+    keys.forEach((k, i) => c.add(k, CHARS[k], 40 + i * (880 / (keys.length - 1)), { face: i % 2 ? -1 : 1, state: 'idle' }));
+    yield c.say('hero', 'Toute la Delivery Team est là !');
+    yield c.wait(1);
   },
 };
 

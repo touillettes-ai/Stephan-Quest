@@ -53,13 +53,15 @@ class Game {
   }
   draw() {
     this.scene.draw(this.ctx);
+    const vg = this.ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98);      // léger vignettage
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.34)'); this.ctx.fillStyle = vg; this.ctx.fillRect(0, 0, W, H);
     if (this.fade > 0) { this.ctx.fillStyle = 'rgba(0,0,0,' + this.fade + ')'; this.ctx.fillRect(0, 0, W, H); }
     if (Sfx.muted) txt(this.ctx, 'SON COUPÉ (M)', W - 12, H - 10, 11, 'rgba(255,255,255,.6)', 'right');
   }
   loop(now) {
     const dt = Math.min(0.05, (now - this.last) / 1000 || 0); this.last = now;
     if (Input.pressed.KeyM && !(this.scene && this.scene.paused)) Sfx.muted = !Sfx.muted;
-    this.update(dt); this.draw(); Input.endFrame();
+    this.update(dt); this.draw(); if (this.afterFrame) this.afterFrame(this); Input.endFrame();
     requestAnimationFrame(n => this.loop(n));
   }
   start() { requestAnimationFrame(n => { this.last = n; this.loop(n); }); }
@@ -81,6 +83,7 @@ function runStep(game, ci, si) {
   else game.go(new LevelScene(game, step, next, () => game.go(new ChapterSelect(game))));
 }
 const stepBg = s => (s && (s.bg || s.theme)) || 'openspace';
+const chapterBg = ch => stepBg(ch.steps.find(s => s.type !== 'cutscene') || ch.steps[0]);
 
 /* ============================================================
    Boîte de dialogue
@@ -115,6 +118,7 @@ function drawDialogue(ctx, d, t) {
    ============================================================ */
 class CutScene {
   constructor(game, def, onDone) { this.game = game; this.def = def; this.onDone = onDone; }
+  get touchMode() { return 'cut'; }
   enter() {
     this.t = 0; this.bg = this.def.bg || 'openspace'; this.theme = this.def.theme || this.bg; this.worldW = this.def.worldW || W;
     this.cam = 0; this.follow = null; this.actors = {}; this.props = []; this.dlg = null; this.caption = null; this.card = null;
@@ -241,6 +245,7 @@ const PHYS = { speed: 230, jump: 640, grav: 1800, maxFall: 900, accelG: 2600, ac
 
 class LevelScene {
   constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.paused ? 'pause' : this.talk || this.done ? 'menu' : 'move'; }
   enter() {
     const d = this.def, m = d.map;
     this.theme = d.theme || 'openspace'; this.bg = d.bg || this.theme;
@@ -461,6 +466,7 @@ class LevelScene {
       const bob = String(it.kind).startsWith('npc:') ? 0 : Math.sin(this.t * 3 + it.ph) * 3;
       ctx.globalAlpha = 0.22 + 0.1 * Math.sin(this.t * 4 + it.ph); circ(ctx, it.x, it.y + bob, 19, '#fff6b0'); ctx.globalAlpha = 1;
       drawItem(ctx, it.kind, it.x, it.y + bob, 1, this.t, it.v);
+      if (!String(it.kind).startsWith('npc:')) { const sp = 0.5 + 0.5 * Math.sin(this.t * 5 + it.ph), q = 2 + 4 * sp; ctx.save(); ctx.translate(it.x + 12, it.y + bob - 13); ctx.rotate(this.t * 0.8); ctx.globalAlpha = 0.35 + 0.55 * sp; poly(ctx, [[0, -q], [1.3, -1.3], [q, 0], [1.3, 1.3], [0, q], [-1.3, 1.3], [-q, 0], [-1.3, -1.3]], '#fff'); ctx.restore(); }
     }
     if (this.chase) {
       const m = this.chase;
@@ -507,7 +513,7 @@ class LevelScene {
     if (this.paused) {
       ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H);
       txt(ctx, 'PAUSE', W / 2, 220, 56, '#fff', 'center');
-      txt(ctx, 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
+      txt(ctx, Device.touch ? 'Touche un bouton ci-dessous' : 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
     }
   }
 }
@@ -518,6 +524,7 @@ class LevelScene {
    ============================================================ */
 class BroomScene {
   constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.paused ? 'pause' : this.done ? 'menu' : 'broom'; }
   enter() {
     const d = this.def;
     this.bg = d.bg || 'circuit'; this.theme = d.theme || 'circuit'; this.goal = d.goal || 24;
@@ -602,7 +609,7 @@ class BroomScene {
       const a = clamp(Math.min(this.t / 0.4, (6 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a;
       rr(ctx, W / 2 - 330, 70, 660, 78, 14, 'rgba(14,18,34,.88)', '#8fa6ff', 2);
       txt(ctx, this.def.title || 'Coup de balai', W / 2, 98, 24, '#ffe08a', 'center'); txt(ctx, this.def.objective || '', W / 2, 124, 16, '#fff', 'center');
-      txt(ctx, '← → bouger · Espace sauter · Entrée / E : coup de balai', W / 2, 144, 14, '#cfd8ff', 'center'); ctx.globalAlpha = 1;
+      txt(ctx, Device.touch ? 'Boutons : ◀ ▶ bouger · ⤒ sauter · BALAI : coup de balai' : '← → bouger · Espace sauter · Entrée / E : coup de balai', W / 2, 144, 14, '#cfd8ff', 'center'); ctx.globalAlpha = 1;
     }
     if (this.toastMsg) { const a = clamp(this.toastMsg.t / 0.4, 0, 1); ctx.globalAlpha = a; ctx.font = 'bold 20px ' + FONT; const w = ctx.measureText(this.toastMsg.s).width + 36; rr(ctx, W / 2 - w / 2, H - 70, w, 38, 12, 'rgba(14,18,34,.9)', '#8fa6ff', 2); txt(ctx, this.toastMsg.s, W / 2, H - 45, 20, '#fff', 'center'); ctx.globalAlpha = 1; }
     if (this.done) {
@@ -612,7 +619,7 @@ class BroomScene {
     }
     if (this.paused) {
       ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H); txt(ctx, 'PAUSE', W / 2, 220, 56, '#fff', 'center');
-      txt(ctx, 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
+      txt(ctx, Device.touch ? 'Touche un bouton ci-dessous' : 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
     }
   }
 }
@@ -626,6 +633,7 @@ const DANCE = { speed: 220, hitY: 70, spawnY: 395, win: 0.17, perfect: 0.07, bon
 const DANCE_LANES = { x: [360, 440, 520, 600], color: ['#ff5ac8', '#4fd8ff', '#7dff7d', '#ffb347'], keys: [['ArrowLeft', 'KeyA'], ['ArrowDown', 'KeyS'], ['ArrowUp', 'KeyW'], ['ArrowRight', 'KeyD']] };
 class DanceScene {
   constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.done ? 'menu' : 'dance'; }
   enter() {
     this.song = MUSIC[this.def.song || 'dancing']; this.bg = this.def.bg || 'bar'; this.theme = this.def.theme || 'bar';
     this.arrows = this.song.arrows.map(([t, lane]) => ({ t, lane, state: 0 }));
@@ -692,7 +700,7 @@ class DanceScene {
     const left = clamp(1 - Math.max(0, st) / this.song.length, 0, 1);
     rr(ctx, W - 150, 10, 138, 34, 12, 'rgba(14,18,34,.82)'); txt(ctx, Math.ceil(left * this.song.length) + ' s', W - 81, 34, 20, '#fff', 'center');
     if (st < 0) txt(ctx, st < -1.6 ? 'Prêts ?' : Math.ceil(-st), 480, 230, 54, '#fff', 'center');
-    if (this.t < 7) { const a = clamp(Math.min(this.t / 0.4, (7 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a; rr(ctx, 160, 410, 640, 40, 12, 'rgba(14,18,34,.88)', '#8fa6ff', 2); txt(ctx, '← ↑ ↓ → (ou Q Z S D) : appuie sur la bonne flèche au bon moment !', 480, 436, 16, '#fff', 'center'); ctx.globalAlpha = 1; }
+    if (this.t < 7) { const a = clamp(Math.min(this.t / 0.4, (7 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a; rr(ctx, 160, 410, 640, 40, 12, 'rgba(14,18,34,.88)', '#8fa6ff', 2); txt(ctx, Device.touch ? 'Touche la bonne flèche (en bas) au bon moment !' : '← ↑ ↓ → (ou Q Z S D) : appuie sur la bonne flèche au bon moment !', 480, 436, 16, '#fff', 'center'); ctx.globalAlpha = 1; }
     if (this.done) {
       const ratio = this.hits / this.arrows.length;
       rr(ctx, W / 2 - 260, 90, 520, 250, 18, 'rgba(14,18,34,.95)', '#ffd23f', 3);
@@ -707,43 +715,73 @@ class DanceScene {
 /* ============================================================
    Écrans : titre, sélection de chapitre, carte de chapitre, générique
    ============================================================ */
+function drawLogo(ctx, text, cx, y, size, t) {                // grand titre doré, lettre par lettre
+  ctx.font = 'bold ' + size + 'px ' + FONT; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left'; ctx.lineJoin = 'round';
+  let x = cx - ctx.measureText(text).width / 2;
+  for (const chr of text) {
+    const w = ctx.measureText(chr).width, by = y + Math.sin(t * 3 + x * 0.02) * 4;
+    ctx.font = 'bold ' + size + 'px ' + FONT; ctx.lineWidth = 11; ctx.strokeStyle = '#4a1a5e'; ctx.strokeText(chr, x, by + 3);
+    ctx.lineWidth = 6; ctx.strokeStyle = '#8a2fa8'; ctx.strokeText(chr, x, by);
+    const g = ctx.createLinearGradient(0, by - size * 0.8, 0, by); g.addColorStop(0, '#fff7b0'); g.addColorStop(1, '#ffb000'); ctx.fillStyle = g; ctx.fillText(chr, x, by);
+    x += w;
+  }
+}
+const TEAM_KEYS = ['coline', 'amelie', 'sheryna', 'youssef', 'imen', 'cecile', 'franck', 'danila', 'hakim', 'matthieu', 'arno', 'justine', 'sandie', 'bastien', 'olivier', 'chef'];
 class TitleScene {
   constructor(game) { this.game = game; }
   enter() {
-    this.t = 0; this.sel = 0; this.parts = [];
-    this.cast = [['sophie', 560], ['karim', 640], ['chef', 720], ['nadia', 800], ['hero', 460]].map(([k, x], i) => ({ ch: CHARS[k], x, t: i * 0.7, st: k === 'hero' ? 'wave' : 'idle' }));
+    this.ownTap = true; this.t = 0; this.sel = 0; this.parts = [];
+    const fx = [120, 240, 360, 600, 720, 840];
+    this.cast = TEAM_KEYS.map((k, i) => ({ ch: CHARS[k === 'matthieu' ? 'cowboy' : k], x: i < 10 ? 50 + i * 92 : fx[(i - 10) % 6], y: i < 10 ? FLOOR_Y + 6 : FLOOR_Y + 36, t: i * 0.37, i }));
+    this.cast.push({ ch: CHARS.hero, x: 480, y: FLOOR_Y + 40, t: 0, i: 99, hero: true });
   }
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
-    if (Math.random() < dt * 2) burst(this.parts, rnd(100, 860), 0, 3, CONFETTI, 30);
+    if (Math.random() < dt * 4) burst(this.parts, rnd(60, 900), 0, 3, CONFETTI, 30);
     if (Input.menuUp() || Input.menuDown()) { this.sel = 1 - this.sel; Sfx.play('blip'); }
-    if (Input.confirm()) { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else this.game.go(new ChapterSelect(this.game)); }
+    if (Input.tap) for (let i = 0; i < 2; i++) { const y = 262 + i * 58; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
+    if (Input.confirm()) this.go();
   }
+  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else this.game.go(new ChapterSelect(this.game)); }
   draw(ctx) {
-    drawBackground(ctx, 'openspace', this.t * 40, 0, this.t);
-    for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) drawTile(ctx, 'openspace', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE);
-    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, FLOOR_Y, { facing: -1, state: c.st, t: c.t });
+    drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
+    for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) { drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE); ctx.globalAlpha = 0.3; rect(ctx, x, y, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(x / TILE + y / TILE + Math.floor(this.t * 1.6)) % 4]); ctx.globalAlpha = 1; }
+    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, c.y, { facing: c.x < 480 ? 1 : -1, state: c.hero ? (Math.floor(this.t * 1.6) % 2 ? 'cheer' : 'wave') : ['cheer', 'wave', 'idle'][(Math.floor(this.t * 1.6) + c.i) % 3], t: c.t });
     drawParticles(ctx, this.parts);
-    rr(ctx, 120, 60, 720, 150, 20, 'rgba(14,18,34,.86)', '#ffd23f', 4);
-    txt(ctx, CONFIG.title, W / 2, 128, 64, '#ffd23f', 'center');
-    txt(ctx, CONFIG.subtitle, W / 2, 175, 24, '#fff', 'center');
-    ['Jouer', 'Choisir un chapitre'].forEach((s, i) => { const y = 270 + i * 50; rr(ctx, W / 2 - 180, y - 30, 360, 42, 12, this.sel === i ? '#ffd23f' : 'rgba(14,18,34,.8)'); txt(ctx, s, W / 2, y, 24, this.sel === i ? '#1a1a2e' : '#fff', 'center'); });
-    txt(ctx, '← → (ou Q D) : bouger   ·   Espace (ou Z / ↑) : sauter   ·   Entrée : dialogues   ·   Échap : pause   ·   M : son', W / 2, H - 14, 14, 'rgba(255,255,255,.9)', 'center');
+    ctx.fillStyle = 'rgba(8,6,24,.45)'; ctx.fillRect(0, 0, W, 330);
+    drawLogo(ctx, CONFIG.title, W / 2, 122, 72, this.t);
+    rr(ctx, W / 2 - 270, 146, 540, 44, 10, '#d6402f', '#fff', 3); poly(ctx, [[W / 2 - 270, 160], [W / 2 - 296, 160], [W / 2 - 280, 168], [W / 2 - 296, 178], [W / 2 - 270, 178]], '#a02a1e'); poly(ctx, [[W / 2 + 270, 160], [W / 2 + 296, 160], [W / 2 + 280, 168], [W / 2 + 296, 178], [W / 2 + 270, 178]], '#a02a1e');
+    txt(ctx, CONFIG.subtitle, W / 2, 177, 24, '#fff', 'center');
+    ['Jouer', 'Choisir un chapitre'].forEach((s, i) => {
+      const y = 262 + i * 58, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
+      if (on) { ctx.globalAlpha = 0.35; rr(ctx, W / 2 - 190, y - 32, 380, 50, 25, '#ffd23f'); ctx.globalAlpha = 1; }
+      rr(ctx, W / 2 - 170, y - 28, 340, 44, 22, on ? '#ffd23f' : 'rgba(20,16,44,.88)', on ? '#fff' : 'rgba(255,255,255,.35)', 2.5);
+      txt(ctx, s, W / 2, y + 2, 25, on ? '#2a1a3e' : '#fff', 'center');
+      if (on) { txt(ctx, '▶', W / 2 - 150 + pulse, y + 2, 20, '#2a1a3e', 'center'); txt(ctx, '◀', W / 2 + 150 - pulse, y + 2, 20, '#2a1a3e', 'center'); }
+    });
+    rr(ctx, 70, H - 36, W - 140, 26, 13, 'rgba(8,6,24,.7)');
+    txt(ctx, Device.touch ? 'Touche un bouton pour jouer   ·   Touche l\'écran pour faire défiler les dialogues   ·   Boutons à l\'écran : bouger / sauter / pause' : '← → (ou Q D) : bouger   ·   Espace (ou Z / ↑) : sauter   ·   Entrée : dialogues   ·   Échap : pause   ·   M : son', W / 2, H - 18, 13, 'rgba(255,255,255,.92)', 'center');
   }
 }
 
 class ChapterSelect {
   constructor(game) { this.game = game; }
-  enter() { this.sel = 0; this.t = 0; }
+  get touchMode() { return 'back'; }
+  enter() { this.ownTap = true; this.sel = 0; this.t = 0; }
   update(dt) {
     this.t += dt;
+    if (Input.tap) {
+      const t = Input.tap, i = Math.floor((t.y - 100) / 52);
+      if (t.x > 40 && t.x < 580 && i >= 0 && i < STORY.length && t.y - 100 - i * 52 < 44) { if (this.sel === i) { runStep(this.game, i, -1); return; } this.sel = i; Sfx.play('blip'); }
+      else if (t.x > 620 && t.x < 920 && t.y > 100 && t.y < 360) { runStep(this.game, this.sel, -1); return; }
+    }
     if (Input.menuUp()) { this.sel = (this.sel + STORY.length - 1) % STORY.length; Sfx.play('blip'); }
     if (Input.menuDown()) { this.sel = (this.sel + 1) % STORY.length; Sfx.play('blip'); }
     if (Input.confirm()) runStep(this.game, this.sel, -1);
     if (Input.back()) this.game.go(new TitleScene(this.game));
   }
   draw(ctx) {
-    const ch = STORY[this.sel], bg = stepBg(ch.steps[0]);
+    const ch = STORY[this.sel], bg = chapterBg(ch);
     drawBackground(ctx, bg, this.t * 30, 0, this.t);
     ctx.fillStyle = 'rgba(8,10,24,.72)'; ctx.fillRect(0, 0, W, H);
     txt(ctx, 'Choisis un chapitre', 40, 56, 34, '#ffd23f');
@@ -754,9 +792,9 @@ class ChapterSelect {
     });
     rr(ctx, 620, 100, 300, 260, 16, 'rgba(14,18,34,.85)', '#8fa6ff', 2);
     txt(ctx, ch.day, 770, 160, 56, '#ffd23f', 'center'); txt(ctx, ch.title, 770, 200, 20, '#fff', 'center');
-    const lv = ch.steps.filter(s => s.type === 'level').length, cs = ch.steps.filter(s => s.type === 'cutscene').length;
+    const lv = ch.steps.filter(s => s.type !== 'cutscene').length, cs = ch.steps.filter(s => s.type === 'cutscene').length;
     txt(ctx, (THEMES[bg] ? THEMES[bg].label : bg), 770, 240, 18, '#cfd8ff', 'center'); txt(ctx, lv + ' niveau(x) · ' + cs + ' cinématique(s)', 770, 272, 16, '#cfd8ff', 'center');
-    txt(ctx, '↑ ↓ : choisir   ·   Entrée : jouer   ·   Échap : retour', W / 2, H - 20, 15, '#fff', 'center');
+    txt(ctx, Device.touch ? 'Touche un chapitre, puis touche-le encore (ou la carte) pour jouer' : '↑ ↓ : choisir   ·   Entrée : jouer   ·   Échap : retour', W / 2, H - 20, 15, '#fff', 'center');
   }
 }
 
@@ -765,7 +803,7 @@ class ChapterCard {
   enter() { this.t = 0; this.done = false; }
   update(dt) { this.t += dt; if (!this.done && (this.t > 2.6 || (this.t > 0.5 && Input.confirm()))) { this.done = true; this.onDone(); } }
   draw(ctx) {
-    drawBackground(ctx, stepBg(this.ch.steps[0]), this.t * 25, 0, this.t);
+    drawBackground(ctx, chapterBg(this.ch), this.t * 25, 0, this.t);
     ctx.fillStyle = 'rgba(5,6,16,.78)'; ctx.fillRect(0, 0, W, H);
     const a = clamp(Math.min(this.t / 0.5, (2.6 - this.t) / 0.5), 0, 1); ctx.globalAlpha = a;
     txt(ctx, this.ch.day, W / 2, H / 2 - 10, 96, '#ffd23f', 'center'); txt(ctx, this.ch.title, W / 2, H / 2 + 40, 30, '#fff', 'center'); ctx.globalAlpha = 1;
@@ -774,7 +812,7 @@ class ChapterCard {
 
 class CreditsScene {
   constructor(game) { this.game = game; }
-  enter() { this.t = 0; this.parts = []; this.cast = [['sophie', 300], ['karim', 380], ['hero', 480], ['chef', 580], ['nadia', 660]].map(([k, x], i) => ({ ch: CHARS[k], x, t: i * 0.5 })); }
+  enter() { this.t = 0; this.parts = []; this.cast = ['coline', 'amelie', 'cecile', 'danila', 'hero', 'sheryna', 'bastien', 'olivier', 'arno', 'chef'].map((k, i) => ({ ch: CHARS[k], x: 90 + i * 86, t: i * 0.5 })); }
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 8) rain(this.parts, 2, CONFETTI);

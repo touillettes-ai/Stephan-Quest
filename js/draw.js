@@ -538,8 +538,10 @@ const THEMES = {
 function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
   const T = THEMES[theme] || THEMES.openspace;
   if (kind === '=') {
-    rr(ctx, px, py, TILE, 12, 3, T.plat); rect(ctx, px, py, TILE, 4, T.platTop);
-    rect(ctx, px, py + 12, TILE, 2, 'rgba(0,0,0,.12)');
+    rect(ctx, px + 3, py + 14, TILE - 2, 6, 'rgba(0,0,0,.13)'); rect(ctx, px + 6, py + 20, TILE - 6, 4, 'rgba(0,0,0,.07)');     // ombre portée sur le décor
+    rect(ctx, px, py, TILE, 14, shade(T.plat, -0.28)); rect(ctx, px, py, TILE, 11, T.plat);
+    rect(ctx, px, py, TILE, 4, T.platTop); rect(ctx, px, py + 4, TILE, 1, shade(T.platTop, -0.3)); rect(ctx, px + 2, py + 1, TILE - 5, 1.5, 'rgba(255,255,255,.4)');
+    circ(ctx, px + TILE / 2, py + 8, 1.4, 'rgba(0,0,0,.28)'); rect(ctx, px, py + 11, TILE, 1, 'rgba(255,255,255,.12)');
     return;
   }
   let base = T.floor;
@@ -553,7 +555,8 @@ function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
     case 'bar':       rect(ctx, px, py + TILE - 1, TILE, 1, 'rgba(255,79,163,.25)'); break;
     case 'circuit':   rect(ctx, px + 8 + ((tx & 1) ? 10 : 0), py, 2, TILE, 'rgba(212,175,55,.3)'); rect(ctx, px, py + 20, TILE, 2, 'rgba(212,175,55,.22)'); circ(ctx, px + 9 + ((tx & 1) ? 10 : 0), py + 21, 2.4, 'rgba(255,230,120,.4)'); break;
   }
-  if (topExposed) { rect(ctx, px, py, TILE, theme === 'charlies' ? 3 : 5, T.floorTop); if (theme === 'bar') { ctx.globalAlpha = 0.35; rect(ctx, px, py - 2, TILE, 2, '#ff4fa3'); ctx.globalAlpha = 1; } }
+  ctx.globalAlpha = 0.16; rect(ctx, px, py + 14, TILE, 18, '#000'); ctx.globalAlpha = 1;               // le bas du bloc s'assombrit
+  if (topExposed) { rect(ctx, px, py, TILE, theme === 'charlies' ? 3 : 5, T.floorTop); rect(ctx, px, py + (theme === 'charlies' ? 3 : 5), TILE, 2, 'rgba(0,0,0,.22)'); rect(ctx, px, py, TILE, 1, 'rgba(255,255,255,.4)'); if (theme === 'bar') { ctx.globalAlpha = 0.35; rect(ctx, px, py - 2, TILE, 2, '#ff4fa3'); ctx.globalAlpha = 1; } }
 }
 
 /* ============================================================
@@ -739,4 +742,15 @@ BG.bar = (ctx, cx, t) => {
     for (let k = 0; k < 9; k++) { rr(ctx, x + 52 + k * 31, 250, 12, 40, 4, cols[k % 5]); rect(ctx, x + 56 + k * 31, 238, 4, 14, cols[k % 5]); rr(ctx, x + 50 + k * 31, 180, 12, 40, 4, cols[(k + 2) % 5]); rect(ctx, x + 54 + k * 31, 168, 4, 14, cols[(k + 2) % 5]); } });
   par(cx, 0.7, 520, (x) => { drawProp(ctx, { kind: 'counter', x: x + 130, y: FLOOR_Y - 4 }, t); for (const dx of [0, 200]) drawProp(ctx, { kind: 'stool', x: x + 270 + dx, y: FLOOR_Y - 4 }, t); });
 };
-function drawBackground(ctx, name, cx, cy, t) { (BG[name] || BG.openspace)(ctx, cx || 0, t || 0); }
+const MOTE_COLOR = { circuit: '#9affd8', crise: '#ff9a9a', bar: '#ffb8f0', pi: '#ffe9a8', reunion: '#e8eefc', japonais: '#fff2c4', charlies: '#ffe6b0', gastro: '#ffe9a8' };
+function drawMotes(ctx, cx, t, name) {                           // petites poussières de lumière qui flottent
+  ctx.fillStyle = MOTE_COLOR[name] || '#ffffff';
+  for (let i = 0; i < 24; i++) {
+    const sp = 5 + hash(i + 9) * 11, x = ((hash(i) * (W + 80) - cx * (0.12 + hash(i + 4) * 0.2) + t * sp) % (W + 80) + (W + 80)) % (W + 80) - 40;
+    const y = hash(i + 3) * (H - 70) + Math.sin(t * 0.7 + i * 1.7) * 14, r = 1 + hash(i + 5) * 2.2;
+    ctx.globalAlpha = (0.10 + 0.16 * (0.5 + 0.5 * Math.sin(t * 1.3 + i))) * (name === 'openspace' || name === 'train' ? 0.8 : 1.4);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawBackground(ctx, name, cx, cy, t) { (BG[name] || BG.openspace)(ctx, cx || 0, t || 0); drawMotes(ctx, cx || 0, t || 0, name); }

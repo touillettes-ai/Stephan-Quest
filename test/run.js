@@ -8,7 +8,7 @@ function mockCtx() {
   return new Proxy(target, { get(t, k) { return k in t ? t[k] : () => {}; }, set(t, k, v) { t[k] = v; return true; } });
 }
 const G = new Function('window', 'document', 'requestAnimationFrame', src + `
-  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, BroomScene, DanceScene, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
+  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
 )({ addEventListener() {} }, {}, () => {});
 const { Input } = G;
 let failures = 0;
@@ -142,6 +142,27 @@ for (const [name, ar] of Object.entries(G.ARENAS)) {
   let finished = false; const sw = new G.BroomScene(fakeGame, ar, () => { finished = true; }, () => {}); sw.enter(); sw.complete();
   for (let i = 0; i < 80; i++) frame(sw, 1 / 60, i === 70 ? { Enter: true } : {}); ok(finished, name + ' : onDone non appelé'); sw.draw(ctx);
   console.log('  ' + name.padEnd(12) + '✓ ' + sc.score + '/' + sc.goal + ' tickets balayés par le bot, ' + sc.hits + ' touche(s)');
+}
+
+/* ---------- 3c. Détection de l'appareil + commandes tactiles ---------- */
+console.log('Tactile');
+{
+  const g = { go(sc) { g.last = sc; }, ctx: mockCtx() };
+  ok(G.Device && G.Device.touch === false, 'Device : le mode clavier doit être le mode par défaut');
+  const modes = { LevelScene: 'move', BroomScene: 'broom', DanceScene: 'dance', CutScene: 'cut', ChapterSelect: 'back' };
+  const lv = new G.LevelScene(g, G.LEVELS.train, () => {}, () => {}); lv.enter(); ok(lv.touchMode === 'move', 'LevelScene : mode tactile move attendu');
+  lv.paused = true; ok(lv.touchMode === 'pause', 'LevelScene en pause : mode pause attendu');
+  const bs = new G.BroomScene(g, G.ARENAS.balai, () => {}, () => {}); bs.enter(); ok(bs.touchMode === 'broom', 'BroomScene : mode broom attendu');
+  const ds = new G.DanceScene(g, G.ARENAS.danse, () => {}, () => {}); ds.enter(); ok(ds.touchMode === 'dance', 'DanceScene : mode dance attendu');
+  const cs = new G.CutScene(g, G.CUTS.casting, () => {}); cs.enter(); ok(cs.touchMode === 'cut', 'CutScene : mode cut attendu');
+  const sel = new G.ChapterSelect(g); sel.enter(); ok(sel.touchMode === 'back', 'ChapterSelect : mode back attendu');
+  // taps sur l'écran titre : « Choisir un chapitre » ouvre la sélection ; « Jouer » lance l'histoire
+  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 262 + 58 }; ti.update(1 / 60); Input.tap = null;
+  ok(g.last instanceof G.ChapterSelect || g.last === undefined && ti.sel === 1, 'Titre : le tap sur « Choisir un chapitre » ne marche pas');
+  g.last = null; const sel2 = new G.ChapterSelect(g); sel2.enter(); Input.tap = { x: 200, y: 100 + 52 * 3 + 10 }; sel2.update(1 / 60); Input.tap = null;
+  ok(sel2.sel === 3, 'Sélection de chapitre : le tap sur une ligne ne la sélectionne pas');
+  Input.tap = { x: 200, y: 100 + 52 * 3 + 10 }; sel2.update(1 / 60); Input.tap = null; ok(g.last, 'Sélection de chapitre : le second tap ne lance pas le chapitre');
+  console.log('  ✓ modes tactiles par scène, taps des menus');
 }
 
 /* ---------- 4. Écrans & dessins ---------- */

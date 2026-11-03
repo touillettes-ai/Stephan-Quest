@@ -8,18 +8,34 @@
   html, body { margin: 0; height: 100%; background: #0b0d1a; overflow: hidden; touch-action: none; }
   body { display: flex; align-items: center; justify-content: center; }
   canvas { width: min(100vw, calc(100vh * 960 / 544)); height: auto; aspect-ratio: 960 / 544; background: #000; image-rendering: auto; }
-  #touch { display: none; position: fixed; left: 0; right: 0; bottom: 14px; padding: 0 16px; justify-content: space-between; pointer-events: none; }
-  #touch .grp { display: flex; gap: 12px; pointer-events: auto; }
-  #touch button { width: 72px; height: 72px; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); background: rgba(20,24,50,.55); color: #fff; font: bold 26px sans-serif; user-select: none; -webkit-user-select: none; }
-  @media (pointer: coarse) { #touch { display: flex; } }
+  html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  #touch { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #touch .g { position: absolute; display: flex; gap: 14px; pointer-events: auto; }
+  #touch .g-left { left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  #touch .g-right { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  #touch .g-top { top: 8px; left: 50%; transform: translateX(-50%); }
+  #touch .g-row { bottom: max(10px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); gap: 12px; }
+  #touch .g-mid { top: 58%; left: 50%; transform: translateX(-50%); }
+  #touch .g-br { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
+  #touch .g-bl { left: max(14px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); }
+  .tb { width: 70px; height: 70px; border-radius: 50%; border: 2px solid rgba(255,255,255,.75); background: rgba(20,24,50,.5); color: #fff; font: bold 26px sans-serif; padding: 0; touch-action: none; }
+  .tb.big { width: 84px; height: 84px; font-size: 32px; }
+  .tb.act { background: rgba(214,64,47,.6); font-size: 15px; }
+  .tb.sq { border-radius: 18px; width: 82px; height: 82px; font-size: 38px; }
+  .tb.pill { width: auto; height: 42px; border-radius: 21px; padding: 0 18px; font-size: 16px; }
+  .tb.on { background: rgba(255,210,63,.75); color: #1a1a2e; }
+  #fs { display: none; position: fixed; top: 8px; left: 8px; width: 40px; height: 40px; border-radius: 10px; border: 2px solid rgba(255,255,255,.6); background: rgba(20,24,50,.5); color: #fff; font: bold 20px sans-serif; z-index: 6; padding: 0; touch-action: none; }
+  body.touch #fs { display: block; }
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0b0d1a; color: #fff; font: bold 22px sans-serif; text-align: center; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+  #rotate b { font-size: 64px; }
+  @media (orientation: portrait) { body.touch #rotate { display: flex; } }
 </style>
 </head>
 <body>
 <canvas id="c" width="960" height="544"></canvas>
-<div id="touch">
-  <div class="grp"><button data-key="ArrowLeft">◀</button><button data-key="ArrowRight">▶</button></div>
-  <div class="grp"><button data-key="Enter">OK</button><button data-key="Space">⤒</button></div>
-</div>
+<div id="touch"></div>
+<button id="fs" title="Plein écran">⛶</button>
+<div id="rotate"><b>⟳</b><div>Tourne ton téléphone<br>en mode paysage pour jouer</div></div>
 <script src="js/util.js"></script>
 <script src="js/music.js"></script>
 <script src="js/draw.js"></script>

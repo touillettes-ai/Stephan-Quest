@@ -11,8 +11,21 @@ const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s
 const mod = (a, m) => ((a % m) + m) % m;
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
 
+/* Détection de l'appareil : écran tactile (téléphone / tablette) ou ordinateur (clavier) */
+const Device = {
+  touch: false, primary: false,
+  init() {
+    const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const ipad = typeof navigator !== 'undefined' && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    this.touch = this.primary = coarse || /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || ipad;
+    window.addEventListener('touchstart', () => { this.touch = true; }, { passive: true });                 // un portable tactile passe en mode tactile dès qu'on touche l'écran
+    window.addEventListener('keydown', e => { if (!this.primary && !e.repeat) this.touch = false; });       // …et revient au clavier dès qu'on tape une touche
+  },
+};
+
 const Input = {
-  down: {}, pressed: {},
+  down: {}, pressed: {}, tap: null,
   init() {
     window.addEventListener('keydown', e => {
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
@@ -23,7 +36,7 @@ const Input = {
     window.addEventListener('keyup', e => { this.down[e.code] = false; });
     window.addEventListener('blur', () => { this.down = {}; });
   },
-  endFrame() { this.pressed = {}; },
+  endFrame() { this.pressed = {}; this.tap = null; },
   _any(codes, src) { for (const c of codes) if (src[c]) return true; return false; },
   // KeyA / KeyD / KeyW = ZQSD sur AZERTY (positions physiques)
   left()        { return this._any(['ArrowLeft', 'KeyA'], this.down); },
