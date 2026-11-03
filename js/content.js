@@ -6,8 +6,8 @@
    ============================================================ */
 
 const CONFIG = {
-  title: 'BONNE RETRAITE',                      // ✏️
-  subtitle: 'Les 15 derniers jours de Stephan',  // ✏️
+  title: '15 JOURS\nET C\'EST LA QUILLE',       // ✏️ (\n = retour à la ligne)
+  subtitle: 'Les derniers jours de Stephan',  // ✏️
   hero: 'Stephan',                              // ✏️ prénom du collègue qui part
   banner: 'BONNE RETRAITE STEPHAN !',            // ✏️ banderole du bar
   credits: [                                    // ✏️ (une ligne commençant par ★ s'affiche en gros)
