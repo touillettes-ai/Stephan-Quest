@@ -76,6 +76,8 @@ function runStep(game, ci, si) {
   if (!step) { runStep(game, ci + 1, -1); return; }
   const next = () => runStep(game, ci, si + 1);
   if (step.type === 'cutscene') game.go(new CutScene(game, step, next));
+  else if (step.type === 'dance') game.go(new DanceScene(game, step, next, () => game.go(new ChapterSelect(game))));
+  else if (step.type === 'broom') game.go(new BroomScene(game, step, next, () => game.go(new ChapterSelect(game))));
   else game.go(new LevelScene(game, step, next, () => game.go(new ChapterSelect(game))));
 }
 const stepBg = s => (s && (s.bg || s.theme)) || 'openspace';
@@ -244,7 +246,7 @@ class LevelScene {
     this.theme = d.theme || 'openspace'; this.bg = d.bg || this.theme;
     this.rows = m.length; this.cols = Math.max.apply(null, m.map(r => r.length));
     this.grid = m.map(r => r.padEnd(this.cols, '.').split(''));
-    this.items = []; this.enemies = []; this.checks = []; this.springs = []; this.exit = null; this.start = { x: 48, y: FLOOR_Y };
+    this.chase = null; this.trail = []; this.items = []; this.enemies = []; this.checks = []; this.springs = []; this.exit = null; this.start = { x: 48, y: FLOOR_Y };
     this.got = {}; this.need = {}; this.parts = [];
     const hz = d.hazards || ['chair', 'mail'];
     for (let ty = 0; ty < this.rows; ty++) for (let tx = 0; tx < this.cols; tx++) {
@@ -253,6 +255,7 @@ class LevelScene {
       if (c === 'S') this.start = { x: cx, y: by };
       else if (c === 'X') this.exit = { x: cx, y: by, open: false };
       else if (c === 'C') this.checks.push({ x: cx, y: by, on: false });
+      else if (c === 'M' && d.chase) { this.chase = { key: d.chase.key, k: d.chase.k, trigger: d.chase.trigger || 280, path: [{ x: cx, y: by }].concat(d.chase.path.map(([tx, row]) => ({ x: tx * TILE + TILE / 2, y: row * TILE }))), i: 0, x: cx, y: by, dir: -1, alert: false, caught: false, hop: null, wait: 0, t: 0, state: 'idle' }; this.need[d.chase.k] = 1; this.got[d.chase.k] = 0; }
       else if (c === '^') this.springs.push({ tx, ty, x: cx, y: by, anim: 0 });
       else if (c >= '1' && c <= '9') { const k = +c; this.items.push({ kind: d.items[k - 1], v: k, x: cx, y: ty * TILE + TILE / 2, taken: false, ph: rnd(0, 6) }); this.need[k] = (this.need[k] || 0) + 1; this.got[k] = 0; }
       else if (c === 'e' || c === 'E') this.enemies.push(this.makeEnemy(c === 'E' && hz[1] && !HAZARDS[hz[1]].fly ? hz[1] : hz[0], cx, ty));
@@ -263,7 +266,7 @@ class LevelScene {
     if (d.need) for (const k in d.need) this.need[k] = d.need[k];
     this.p = { x: this.start.x, y: this.start.y, vx: 0, vy: 0, w: 20, h: 50, face: 1, ground: false, coyote: 0, jbuf: 0, state: 'idle', t: 0, dead: 0, inv: 0, rot: 0, spawn: { x: this.start.x, y: this.start.y } };
     this.cam = { x: 0, y: 0 }; this.snapCam();
-    this.t = 0; this.falls = 0; this.done = false; this.doneT = 0; this.paused = false; this.toastMsg = null; this.exitWarn = 0;
+    this.talk = null; this.t = 0; this.falls = 0; this.done = false; this.doneT = 0; this.paused = false; this.toastMsg = null; this.exitWarn = 0;
   }
   makeEnemy(type, cx, ty) {
     const H0 = HAZARDS[type]; let y = (ty + 1) * TILE;
@@ -324,7 +327,7 @@ class LevelScene {
     if (kind === 'fall') { p.dead = 0.55; p.vy = 0; p.vx = 0; this.toast('Plouf !'); }
     else { p.dead = 0.9; p.vy = -460; p.vx = -p.face * 90; this.toast('Aïe !'); }
   }
-  respawn() { const p = this.p; p.x = p.spawn.x; p.y = p.spawn.y; p.vx = 0; p.vy = 0; p.dead = 0; p.rot = 0; p.inv = 1.6; p.ground = false; this.snapCam(); }
+  respawn() { this.trail = []; const p = this.p; p.x = p.spawn.x; p.y = p.spawn.y; p.vx = 0; p.vy = 0; p.dead = 0; p.rot = 0; p.inv = 1.6; p.ground = false; this.snapCam(); }
 
   /* ----- boucle ----- */
   update(dt) {
@@ -339,6 +342,7 @@ class LevelScene {
     this.t += dt;
     updateParticles(this.parts, dt);
     if (this.toastMsg) { this.toastMsg.t -= dt; if (this.toastMsg.t <= 0) this.toastMsg = null; }
+    if (this.talk) { this.updateTalk(dt); return; }
     if (this.done) {
       this.doneT += dt;
       if (this.doneT > 0.8 && Input.confirm()) this.onDone({ falls: this.falls, time: this.t });
@@ -354,6 +358,7 @@ class LevelScene {
     p.t += dt;
     p.state = p.dead > 0 ? 'hurt' : !p.ground ? (p.vy < 0 ? 'jump' : 'fall') : Math.abs(p.vx) > 20 ? 'walk' : 'idle';
     this.entities(dt);
+    if (this.def.follower) { this.trail.push({ t: this.t, x: p.x, y: p.y, face: p.face, state: p.state }); while (this.trail.length > 1 && this.trail[0].t < this.t - 1.2) this.trail.shift(); }
     const tx = p.x - W / 2 + p.face * 40, ty = p.y - H * 0.7;
     this.cam.x = clamp(lerp(this.cam.x, tx, Math.min(1, dt * 5)), 0, Math.max(0, this.cols * TILE - W));
     this.cam.y = clamp(lerp(this.cam.y, ty, Math.min(1, dt * 5)), 0, Math.max(0, this.rows * TILE - H));
@@ -369,8 +374,10 @@ class LevelScene {
     }
     for (const it of this.items) if (!it.taken && alive && Math.abs(p.x - it.x) < 22 && p.y - p.h / 2 > it.y - 38 && p.y - p.h / 2 < it.y + 38 + 10) {
       it.taken = true; this.got[it.v]++; Sfx.play('coin'); burst(this.parts, it.x, it.y, 10, ['#ffe08a', '#fff', '#8fe3ff'], 150);
+      if (this.def.talks && this.def.talks[it.v]) this.startTalk(this.def.talks[it.v]);
       if (this.allDone() && this.exit && !this.exit.open) { this.exit.open = true; Sfx.play('door'); this.toast('Tout est là ! Cap sur la sortie →'); }
     }
+    if (this.chase) this.updateChase(this.chase, dt);
     for (const e of this.enemies) {
       if (!e.alive) { e.squash += dt; continue; }
       e.t += dt;
@@ -391,9 +398,50 @@ class LevelScene {
     }
     if (this.exitWarn > 0) this.exitWarn -= dt;
   }
+  /* ----- poursuite : un personnage qui bondit de plateforme en plateforme quand on s'approche (def.chase + 'M' dans la carte) ----- */
+  updateChase(m, dt) {
+    const p = this.p, alive = p.dead <= 0; m.t += dt;
+    if (m.caught) {                                     // une fois attrapé, il suit le héros
+      m.x += (p.x - p.face * 30 - m.x) * Math.min(1, dt * 6); m.y += (p.y - m.y) * Math.min(1, dt * 12); m.dir = p.face;
+      m.state = p.state === 'walk' ? 'walk' : (p.ground ? 'idle' : 'jump'); return;
+    }
+    if (!m.alert && alive && Math.abs(p.x - m.x) < m.trigger) { m.alert = true; this.toast(CHARS[m.key].name + ' t\'a repéré ! Il file !'); Sfx.play('spring'); }
+    if (m.alert && !m.hop && m.i < m.path.length - 1) {
+      if (m.wait > 0) m.wait -= dt;
+      else if (Math.abs(p.x - m.x) < 230) { const a = m.path[m.i], b = m.path[m.i + 1]; m.hop = { a, b, u: 0, dur: 0.75, arc: 46 + Math.max(0, a.y - b.y) * 0.5 }; m.dir = b.x >= a.x ? 1 : -1; Sfx.play('jump'); }
+    }
+    if (m.hop) {
+      const h = m.hop; h.u = Math.min(1, h.u + dt / h.dur);
+      m.x = lerp(h.a.x, h.b.x, h.u); m.y = lerp(h.a.y, h.b.y, h.u) - Math.sin(h.u * Math.PI) * h.arc; m.state = 'jump';
+      if (h.u >= 1) { m.i++; m.hop = null; m.wait = 0.5; }
+    } else m.state = m.alert && m.i >= m.path.length - 1 ? 'wave' : 'idle';
+    if (alive && Math.abs(p.x - m.x) < 24 && p.y > m.y - 58 && p.y - p.h < m.y) {
+      m.caught = true; this.got[m.k]++; Sfx.play('coin'); burst(this.parts, m.x, m.y - 30, 16, ['#ffe08a', '#fff', '#f4a6b8'], 170);
+      if (this.def.talks && this.def.talks[m.k]) this.startTalk(this.def.talks[m.k]);
+      if (this.allDone() && this.exit && !this.exit.open) { this.exit.open = true; Sfx.play('door'); this.toast('Tout est là ! Cap sur la sortie →'); }
+    }
+  }
+
+  /* ----- petites scènes de dialogue pendant le niveau (def.talks = { numéroObjet: [[perso|null, texte], …] }) ----- */
+  startTalk(lines) { this.talk = { lines, i: -1, d: null, age: 0 }; this.nextTalk(); }
+  nextTalk() {
+    const k = this.talk; k.i++;
+    if (k.i >= k.lines.length) { this.talk = null; return; }
+    const [who, text] = k.lines[k.i], ch = who ? CHARS[who] : null;
+    k.d = { ch, name: ch ? ch.name : null, text, shown: 0, last: 0, talking: true }; k.age = 0;
+  }
+  updateTalk(dt) {
+    const k = this.talk, d = k.d; k.age += dt;
+    if (d.shown < d.text.length) {
+      d.shown = Math.min(d.text.length, d.shown + dt * 46);
+      const n = Math.floor(d.shown); if (n !== d.last) { if (n % 2 === 0 && d.text[n - 1] !== ' ') Sfx.play('blip'); d.last = n; }
+      d.talking = d.shown < d.text.length;
+      if (Input.confirm() && k.age > 0.15) d.shown = d.text.length;
+    } else { d.talking = false; if (Input.confirm() && k.age > 0.15) this.nextTalk(); }
+  }
   remaining() { let r = 0; for (const k in this.need) r += Math.max(0, this.need[k] - this.got[k]); return r; }
   allDone() { return this.remaining() === 0; }
-  complete() { this.done = true; this.doneT = 0; Sfx.play('win'); burst(this.parts, this.exit.x, this.exit.y - 40, 70, CONFETTI, 380); }
+  complete() { this.talk = null; this.done = true; this.doneT = 0; Sfx.play('win'); burst(this.parts, this.exit.x, this.exit.y - 40, 70, CONFETTI, 380); }
 
   /* ----- affichage ----- */
   draw(ctx) {
@@ -410,23 +458,34 @@ class LevelScene {
     for (const c of this.checks) drawCoffeeMachine(ctx, c.x, c.y, c.on, this.t);
     if (this.exit) drawDoor(ctx, this.exit.x, this.exit.y, this.exit.open, this.t, this.def.exitLabel);
     for (const it of this.items) if (!it.taken) {
-      const bob = Math.sin(this.t * 3 + it.ph) * 3;
+      const bob = String(it.kind).startsWith('npc:') ? 0 : Math.sin(this.t * 3 + it.ph) * 3;
       ctx.globalAlpha = 0.22 + 0.1 * Math.sin(this.t * 4 + it.ph); circ(ctx, it.x, it.y + bob, 19, '#fff6b0'); ctx.globalAlpha = 1;
       drawItem(ctx, it.kind, it.x, it.y + bob, 1, this.t, it.v);
     }
+    if (this.chase) {
+      const m = this.chase;
+      if (this.def.chase.mount) {                 // monté sur une monture (ex. un cheval gonflable)
+        const bob = Math.abs(Math.sin(m.t * 9)) * (m.state === 'jump' ? 0 : 5);
+        drawProp(ctx, { kind: this.def.chase.mount, x: m.x, y: m.y - bob, face: m.dir }, m.t);
+        drawCharacter(ctx, CHARS[m.key], m.x - m.dir * 6, m.y - 38 - bob, { facing: m.dir, state: 'sit', t: m.t });
+      } else drawCharacter(ctx, CHARS[m.key], m.x, m.y, { facing: m.dir, state: m.state, t: m.t });
+    }
     for (const e of this.enemies) if (!e.alive && e.squash > 0.5) continue; else drawHazard(ctx, e.type, e.x, e.y, e.t, e.dir, !e.alive);
+    if (this.def.follower && this.trail.length) { const tt = this.t - 0.45; let sm = this.trail[0]; for (const q of this.trail) { if (q.t <= tt) sm = q; else break; } drawCharacter(ctx, CHARS[this.def.follower], sm.x, sm.y, { facing: sm.face, state: sm.state, t: this.t }); }
     const p = this.p;
     if (!(p.inv > 0 && p.dead <= 0 && Math.floor(this.t * 14) % 2 === 0)) drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: p.face, state: p.state, t: p.t, rot: p.dead > 0 ? p.rot : 0, noShadow: p.dead > 0 });
     drawParticles(ctx, this.parts);
     ctx.restore();
     this.drawHUD(ctx);
+    if (this.talk) drawDialogue(ctx, this.talk.d, this.t);
   }
   drawHUD(ctx) {
     const keys = Object.keys(this.need), pw = 24 + keys.length * 98;
     rr(ctx, 12, 10, pw, 46, 12, 'rgba(14,18,34,.8)', 'rgba(143,166,255,.6)', 1.5);
     let x = 24;
     for (const k of keys) {
-      drawItem(ctx, this.def.items[k - 1], x + 14, 33, 0.95, this.t, +k);
+      const ik = this.def.items[k - 1];
+      if (String(ik).startsWith('npc:')) drawPortrait(ctx, CHARS[ik.slice(4)], x, 19, 28, 28, this.t, false); else drawItem(ctx, ik, x + 14, 33, 0.95, this.t, +k);
       const done = this.got[k] >= this.need[k];
       txt(ctx, this.got[k] + '/' + this.need[k], x + 36, 40, 19, done ? '#7dffa0' : '#fff'); x += 98;
     }
@@ -449,6 +508,198 @@ class LevelScene {
       ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H);
       txt(ctx, 'PAUSE', W / 2, 220, 56, '#fff', 'center');
       txt(ctx, 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
+    }
+  }
+}
+
+/* ============================================================
+   BroomScene : arène « coup de balai » — des tickets arrivent, on les balaie
+   (def : { type:'broom', thrower:'franck', goal:24, bg, theme, title, objective })
+   ============================================================ */
+class BroomScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  enter() {
+    const d = this.def;
+    this.bg = d.bg || 'circuit'; this.theme = d.theme || 'circuit'; this.goal = d.goal || 24;
+    this.t = 0; this.p = { x: 240, y: FLOOR_Y, vy: 0, ground: true, state: 'idle', t: 0, inv: 0 };
+    this.b = { x: 150, y: FLOOR_Y };
+    this.tickets = []; this.parts = []; this.spawnT = 1.6; this.swing = 0; this.hits = 0; this.score = 0; this.throwAnim = 0;
+    this.done = false; this.doneT = 0; this.lost = 0; this.paused = false; this.toastMsg = null; this.flash = 0;
+  }
+  toast(s) { this.toastMsg = { s, t: 2.2 }; }
+  restart() { this.game.go(new BroomScene(this.game, this.def, this.onDone, this.onQuit)); }
+  complete() { if (this.done) return; this.done = true; this.doneT = 0; this.tickets = []; Sfx.play('win'); burst(this.parts, 480, 200, 90, CONFETTI, 380); }
+  update(dt) {
+    if (Input.back() || Input.pressed.KeyP) this.paused = !this.paused;
+    if (this.paused) {
+      if (Input.pressed.KeyR) this.restart();
+      if (Input.pressed.KeyM) this.onQuit();
+      if (Input.pressed.Enter) this.paused = false;
+      return;
+    }
+    if (Input.pressed.KeyR && !this.done) { this.restart(); return; }
+    this.t += dt; updateParticles(this.parts, dt);
+    if (this.toastMsg) { this.toastMsg.t -= dt; if (this.toastMsg.t <= 0) this.toastMsg = null; }
+    if (this.flash > 0) this.flash -= dt;
+    if (this.done) { this.doneT += dt; if (this.doneT > 0.8 && Input.confirm()) this.onDone({ time: this.t }); return; }
+    if (this.lost > 0) { this.lost -= dt; if (this.lost <= 0) this.restart(); return; }
+    const p = this.p, ax = (Input.right() ? 1 : 0) - (Input.left() ? 1 : 0);
+    p.x = clamp(p.x + ax * PHYS.speed * 0.9 * dt, 150, 600);
+    if (p.ground && Input.jumpPressed()) { p.vy = -PHYS.jump; p.ground = false; Sfx.play('jump'); }
+    p.vy += PHYS.grav * dt; p.y += p.vy * dt;
+    if (p.y >= FLOOR_Y) { p.y = FLOOR_Y; p.vy = 0; p.ground = true; }
+    p.state = !p.ground ? 'jump' : ax ? 'walk' : 'idle'; p.t += dt; if (p.inv > 0) p.inv -= dt;
+    this.b.x += (p.x - 85 - this.b.x) * Math.min(1, dt * 8); this.b.y += (p.y - this.b.y) * Math.min(1, dt * 10);
+    if (this.swing > -0.12) this.swing -= dt;
+    if (['Enter', 'NumpadEnter', 'KeyE', 'KeyX', 'KeyF'].some(k => Input.pressed[k]) && this.swing <= -0.12) { this.swing = 0.3; Sfx.play('stomp'); }
+    this.throwAnim = Math.max(0, this.throwAnim - dt);
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) {
+      const prog = this.score / this.goal, lvl = [452, 405, 330][Math.floor(Math.random() * 3)];
+      const n = Math.random() < 0.22 ? 2 : 1;
+      for (let i = 0; i < n; i++) { const yy = i ? [452, 405, 330].filter(v => v !== lvl)[Math.floor(Math.random() * 2)] : lvl; this.tickets.push({ x: 830 + i * 70, y: yy, y0: yy, vx: -rnd(150, 440) * (1 + 0.4 * prog), t: 0, amp: Math.random() < 0.35 ? rnd(10, 32) : 0, ph: rnd(0, 6) }); }
+      this.throwAnim = 0.35; Sfx.play('blip'); this.spawnT = rnd(0.7, 1.3) * (1 - 0.35 * prog) + 0.2;
+    }
+    const zone = (o, tk) => tk.x > o.x + 8 && tk.x < o.x + 112 && tk.y > o.y - 118 && tk.y < o.y + 8;
+    const body = (o, tk) => Math.abs(tk.x - o.x) < 26 && tk.y > o.y - 66 && tk.y < o.y + 6;
+    for (const tk of this.tickets) {
+      tk.t += dt; tk.x += tk.vx * dt; tk.y = tk.y0 + Math.sin(tk.t * 5 + tk.ph) * tk.amp;
+      if (this.swing > 0 && (zone(p, tk) || zone(this.b, tk))) {
+        tk.dead = true; this.score++; Sfx.play('coin'); burst(this.parts, tk.x, tk.y, 10, ['#ffe08a', '#fff', '#ff8a6a'], 170);
+        if (this.score >= this.goal) { this.complete(); return; }
+      } else if (p.inv <= 0 && (body(p, tk) || body(this.b, tk))) {
+        tk.dead = true; this.hits++; p.inv = 0.7; this.flash = 0.25; Sfx.play('hurt'); burst(this.parts, tk.x, tk.y, 8, ['#d6402f', '#fff'], 150);
+        if (this.hits >= 4) { this.lost = 1.6; this.toast('Touchés 4 fois… on recommence !'); } else this.toast('Aïe ! ' + this.hits + '/4');
+      } else if (tk.x < -60) tk.dead = true;
+    }
+    this.tickets = this.tickets.filter(tk => !tk.dead);
+  }
+  broom(ctx, o, delay) {
+    const k = this.swing > 0 ? clamp(1 - (this.swing - delay) / 0.3, 0, 1) : 0, ang = this.swing > 0 ? lerp(-2.1, 0.75, ease(k)) : 1.4;
+    drawBroom(ctx, o.x + 8, o.y - 47, ang, 62);
+  }
+  draw(ctx) {
+    drawBackground(ctx, this.bg, this.t * 40, 0, this.t);
+    for (let tx = 0; tx <= W / TILE; tx++) for (let ty = FLOOR_Y / TILE; ty < H / TILE; ty++) drawTile(ctx, this.theme, '#', tx * TILE, ty * TILE, ty === FLOOR_Y / TILE, tx, ty);
+    const th = this.def.thrower || 'franck';
+    rr(ctx, 800, FLOOR_Y - 36, 130, 36, 6, '#14543c', '#d9b64a', 2); rect(ctx, 800, FLOOR_Y - 36, 130, 5, '#d9b64a');
+    drawCharacter(ctx, CHARS[th], 865, FLOOR_Y - 36, { facing: -1, state: this.throwAnim > 0 ? 'wave' : 'idle', t: this.t });
+    const p = this.p, blink = p.inv > 0 && Math.floor(this.t * 14) % 2 === 0;
+    drawCharacter(ctx, CHARS.bastien, this.b.x, this.b.y, { facing: 1, state: p.state, t: this.t }); this.broom(ctx, this.b, 0.04);
+    if (!blink) drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: 1, state: p.state, t: p.t });
+    this.broom(ctx, p, 0);
+    for (const tk of this.tickets) drawTicketHDR(ctx, tk.x, tk.y, this.t + tk.ph);
+    drawParticles(ctx, this.parts);
+    if (this.flash > 0) { ctx.fillStyle = 'rgba(255,40,40,' + this.flash * 0.6 + ')'; ctx.fillRect(0, 0, W, H); }
+    this.drawHUD(ctx);
+  }
+  drawHUD(ctx) {
+    rr(ctx, 12, 10, 330, 46, 12, 'rgba(14,18,34,.8)', 'rgba(143,166,255,.6)', 1.5);
+    drawTicketHDR(ctx, 50, 33, 0); txt(ctx, this.score + '/' + this.goal, 90, 41, 20, this.score >= this.goal ? '#7dffa0' : '#fff');
+    for (let i = 0; i < 4; i++) { circ(ctx, 214 + i * 30, 33, 10, i < 4 - this.hits ? '#ff5a6a' : '#3a2f3a'); circ(ctx, 214 + i * 30, 33, 10, 'rgba(0,0,0,0)'); }
+    txt(ctx, 'vies', 168, 39, 14, '#cfd8ff', 'center');
+    if (this.t < 6) {
+      const a = clamp(Math.min(this.t / 0.4, (6 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a;
+      rr(ctx, W / 2 - 330, 70, 660, 78, 14, 'rgba(14,18,34,.88)', '#8fa6ff', 2);
+      txt(ctx, this.def.title || 'Coup de balai', W / 2, 98, 24, '#ffe08a', 'center'); txt(ctx, this.def.objective || '', W / 2, 124, 16, '#fff', 'center');
+      txt(ctx, '← → bouger · Espace sauter · Entrée / E : coup de balai', W / 2, 144, 14, '#cfd8ff', 'center'); ctx.globalAlpha = 1;
+    }
+    if (this.toastMsg) { const a = clamp(this.toastMsg.t / 0.4, 0, 1); ctx.globalAlpha = a; ctx.font = 'bold 20px ' + FONT; const w = ctx.measureText(this.toastMsg.s).width + 36; rr(ctx, W / 2 - w / 2, H - 70, w, 38, 12, 'rgba(14,18,34,.9)', '#8fa6ff', 2); txt(ctx, this.toastMsg.s, W / 2, H - 45, 20, '#fff', 'center'); ctx.globalAlpha = 1; }
+    if (this.done) {
+      rr(ctx, W / 2 - 250, 150, 500, 200, 18, 'rgba(14,18,34,.94)', '#ffd23f', 3);
+      txt(ctx, 'Backlog nettoyé !', W / 2, 205, 36, '#ffd23f', 'center'); txt(ctx, this.score + ' tickets HDR balayés · ' + this.hits + ' touche(s)', W / 2, 250, 20, '#cfd8ff', 'center');
+      if (this.doneT > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée pour continuer', W / 2, 310, 18, '#8fa6ff', 'center');
+    }
+    if (this.paused) {
+      ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H); txt(ctx, 'PAUSE', W / 2, 220, 56, '#fff', 'center');
+      txt(ctx, 'Entrée / Échap : reprendre   ·   R : recommencer   ·   M : retour au menu', W / 2, 270, 18, '#cfd8ff', 'center');
+    }
+  }
+}
+
+/* ============================================================
+   DanceScene : jeu de rythme façon DDR sur un extrait de musique (MUSIC, music.js)
+   def : { type:'dance', song:'dancing', bg, theme, title, objective }
+   1 point par flèche réussie, +BONUS toutes les 10 flèches réussies.
+   ============================================================ */
+const DANCE = { speed: 220, hitY: 70, spawnY: 395, win: 0.17, perfect: 0.07, bonus: 10, every: 10, lead: 2.6 };
+const DANCE_LANES = { x: [360, 440, 520, 600], color: ['#ff5ac8', '#4fd8ff', '#7dff7d', '#ffb347'], keys: [['ArrowLeft', 'KeyA'], ['ArrowDown', 'KeyS'], ['ArrowUp', 'KeyW'], ['ArrowRight', 'KeyD']] };
+class DanceScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  enter() {
+    this.song = MUSIC[this.def.song || 'dancing']; this.bg = this.def.bg || 'bar'; this.theme = this.def.theme || 'bar';
+    this.arrows = this.song.arrows.map(([t, lane]) => ({ t, lane, state: 0 }));
+    this.t = 0; this.score = 0; this.hits = 0; this.misses = 0; this.combo = 0; this.best = 0; this.bonuses = 0; this.pops = []; this.parts = []; this.pressed = [0, 0, 0, 0];
+    this.done = false; this.doneT = 0; this.pose = 0; this.poseT = 0; this.cast = this.def.guests || ['coline', 'amelie', 'sheryna', 'youssef', 'imen', 'cecile', 'franck', 'danila', 'hakim', 'cowboy', 'arno', 'justine', 'sandie', 'bastien', 'olivier', 'chef'];
+    this.started = false; Music.start(this.song, DANCE.lead);
+  }
+  songTime() { return Music.playing ? Music.time() : this.t - DANCE.lead; }
+  restart() { Music.stop(); this.game.go(new DanceScene(this.game, this.def, this.onDone, this.onQuit)); }
+  pop(text, color, y) { this.pops.push({ text, color, y: y || 200, t: 0 }); }
+  finish() { if (this.done) return; this.done = true; this.doneT = 0; Music.stop(); Sfx.play('win'); burst(this.parts, 480, 150, 90, CONFETTI, 380); }
+  update(dt) {
+    if (Input.pressed.KeyR && !this.done) { this.restart(); return; }
+    this.t += dt; updateParticles(this.parts, dt); this.poseT -= dt;
+    for (let i = 0; i < 4; i++) this.pressed[i] = Math.max(0, this.pressed[i] - dt);
+    for (const p of this.pops) p.t += dt; this.pops = this.pops.filter(p => p.t < 0.9);
+    Music.update();
+    if (this.done) { this.doneT += dt; if (this.doneT > 0.8 && Input.confirm()) this.onDone({ score: this.score }); return; }
+    const st = this.songTime();
+    for (let lane = 0; lane < 4; lane++) {
+      if (!DANCE_LANES.keys[lane].some(k => Input.pressed[k])) continue;
+      this.pressed[lane] = 0.15;
+      let best = null; for (const a of this.arrows) if (a.state === 0 && a.lane === lane && Math.abs(a.t - st) <= DANCE.win && (!best || Math.abs(a.t - st) < Math.abs(best.t - st))) best = a;
+      if (!best) { this.combo = 0; continue; }
+      best.state = 1; this.hits++; this.score++; this.combo++; this.best = Math.max(this.best, this.combo);
+      const perfect = Math.abs(best.t - st) <= DANCE.perfect;
+      Sfx.play('coin'); this.pop(perfect ? 'PARFAIT !' : 'BIEN', perfect ? '#ffe08a' : '#8fe3ff', 120);
+      burst(this.parts, DANCE_LANES.x[lane], DANCE.hitY, 8, [DANCE_LANES.color[lane], '#fff'], 150);
+      this.pose = lane; this.poseT = 0.28;
+      if (this.hits % DANCE.every === 0) { this.score += DANCE.bonus; this.bonuses++; this.pop('BONUS +' + DANCE.bonus + ' !', '#ff9af0', 170); Sfx.play('win'); burst(this.parts, 480, 120, 40, CONFETTI, 300); }
+    }
+    for (const a of this.arrows) if (a.state === 0 && st - a.t > DANCE.win) { a.state = 2; this.misses++; this.combo = 0; }
+    if (st > this.song.length + 0.8) this.finish();
+  }
+  draw(ctx) {
+    const st = this.songTime(), beat = Math.max(0, st) * this.song.bpm / 60;
+    drawBackground(ctx, this.bg, 0, 0, this.t);
+    for (let tx = 0; tx <= W / TILE; tx++) for (let ty = FLOOR_Y / TILE; ty < H / TILE; ty++) {      // piste de danse lumineuse
+      drawTile(ctx, this.theme, '#', tx * TILE, ty * TILE, ty === FLOOR_Y / TILE, tx, ty);
+      ctx.globalAlpha = 0.35; rect(ctx, tx * TILE, ty * TILE, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(tx + ty + Math.floor(beat)) % 4]); ctx.globalAlpha = 1;
+    }
+    // invités qui dansent (fond), Stephan en première ligne
+    const row = this.cast, per = 10, fx = [120, 240, 360, 600, 720, 840];
+    row.forEach((k, i) => { const back = i < per, x = back ? 50 + i * 92 : fx[(i - per) % 6], y = back ? FLOOR_Y + 6 : FLOOR_Y + 36; drawCharacter(ctx, CHARS[k], x, y, { facing: x < 480 ? 1 : -1, state: ['cheer', 'wave', 'idle'][(Math.floor(beat) + i) % 3], t: this.t + i }); });
+    const hs = this.poseT > 0 ? ['wave', 'jump', 'cheer', 'wave'][this.pose] : (Math.floor(beat * 2) % 2 ? 'cheer' : 'idle');
+    drawCharacter(ctx, CHARS.hero, 480, FLOOR_Y + 52, { facing: 1, state: hs, t: this.t });
+    // couloir des flèches
+    rr(ctx, 320, 18, 320, 380, 14, 'rgba(10,8,30,.62)', 'rgba(255,255,255,.3)', 2);
+    for (let l = 0; l < 4; l++) { const x = DANCE_LANES.x[l]; ctx.globalAlpha = 0.5 + 0.5 * (this.pressed[l] > 0 ? 1 : 0); drawArrow(ctx, x, DANCE.hitY, l, this.pressed[l] > 0 ? DANCE_LANES.color[l] : 'rgba(255,255,255,.08)', 25, DANCE_LANES.color[l]); ctx.globalAlpha = 1; }
+    for (const a of this.arrows) {
+      if (a.state === 1) continue;
+      const y = DANCE.hitY + (a.t - st) * DANCE.speed; if (y > DANCE.spawnY + 30 || y < -40) continue;
+      ctx.globalAlpha = a.state === 2 ? 0.25 : clamp((DANCE.spawnY + 30 - y) / 40, 0, 1);
+      drawArrow(ctx, DANCE_LANES.x[a.lane], y, a.lane, DANCE_LANES.color[a.lane], 25, '#fff'); ctx.globalAlpha = 1;
+    }
+    drawParticles(ctx, this.parts);
+    for (const p of this.pops) { ctx.globalAlpha = clamp(1 - p.t / 0.9, 0, 1); txt(ctx, p.text, 480, p.y - p.t * 30, p.text.startsWith('BONUS') ? 36 : 28, p.color, 'center'); ctx.globalAlpha = 1; }
+    this.drawHUD(ctx, st);
+  }
+  drawHUD(ctx, st) {
+    rr(ctx, 12, 10, 270, 74, 12, 'rgba(14,18,34,.82)', 'rgba(143,166,255,.6)', 1.5);
+    txt(ctx, 'Points : ' + this.score, 26, 38, 22, '#ffe08a'); txt(ctx, 'Combo : ' + this.combo, 26, 62, 16, '#cfd8ff'); txt(ctx, 'Flèches : ' + this.hits + '/' + this.arrows.length, 150, 62, 16, '#cfd8ff');
+    rr(ctx, 26, 70, 242, 8, 4, 'rgba(255,255,255,.15)'); rr(ctx, 26, 70, 242 * ((this.hits % DANCE.every) / DANCE.every), 8, 4, '#ff9af0');
+    const left = clamp(1 - Math.max(0, st) / this.song.length, 0, 1);
+    rr(ctx, W - 150, 10, 138, 34, 12, 'rgba(14,18,34,.82)'); txt(ctx, Math.ceil(left * this.song.length) + ' s', W - 81, 34, 20, '#fff', 'center');
+    if (st < 0) txt(ctx, st < -1.6 ? 'Prêts ?' : Math.ceil(-st), 480, 230, 54, '#fff', 'center');
+    if (this.t < 7) { const a = clamp(Math.min(this.t / 0.4, (7 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a; rr(ctx, 160, 410, 640, 40, 12, 'rgba(14,18,34,.88)', '#8fa6ff', 2); txt(ctx, '← ↑ ↓ → (ou Q Z S D) : appuie sur la bonne flèche au bon moment !', 480, 436, 16, '#fff', 'center'); ctx.globalAlpha = 1; }
+    if (this.done) {
+      const ratio = this.hits / this.arrows.length;
+      rr(ctx, W / 2 - 260, 90, 520, 250, 18, 'rgba(14,18,34,.95)', '#ffd23f', 3);
+      txt(ctx, ratio > 0.85 ? 'Dancing King !' : ratio > 0.5 ? 'Belle prestation !' : 'On a dansé, c\'est l\'essentiel !', W / 2, 145, 34, '#ffd23f', 'center');
+      txt(ctx, this.score + ' points', W / 2, 192, 30, '#fff', 'center');
+      txt(ctx, this.hits + '/' + this.arrows.length + ' flèches · ' + this.bonuses + ' bonus · meilleur combo ' + this.best, W / 2, 232, 18, '#cfd8ff', 'center');
+      if (this.doneT > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée pour continuer', W / 2, 300, 18, '#8fa6ff', 'center');
     }
   }
 }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{position:fixed;left:0;top:0}</style></head>
 <body><canvas id="c" width="960" height="544"></canvas>
-<script src="../js/util.js"></script><script src="../js/draw.js"></script><script src="../js/engine.js"></script><script src="../js/content.js"></script>
+<script src="../js/util.js"></script><script src="../js/music.js"></script><script src="../js/draw.js"></script><script src="../js/engine.js"></script><script src="../js/content.js"></script>
 <script>
 // Page de test : #titre | #select | #level/NOM/xPixels | #cut/NOM/secondes  (rend UNE image puis s'arrête)
 const [kind, name, param] = location.hash.slice(1).split('/');
@@ -16,6 +16,14 @@ else if (kind === 'level') {
   const px = +param || 0; if (px) { sc.p.x = px; sc.p.y = FLOOR_Y; sc.snapCam(); }
   for (let i = 0; i < 45; i++) step(1 / 30, i === 30 ? { Space: true } : {});
   Input.down = {}; sc.p.inv = 0; if (px) sc.t = 6;
+}
+else if (kind === 'dance') {
+  sc = new DanceScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 8; for (let i = 0; i < T * 30; i++) step(1 / 30, {});
+}
+else if (kind === 'broom') {
+  sc = new BroomScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 5; for (let i = 0; i < T * 30; i++) step(1 / 30, i % 12 === 0 ? { Enter: true } : {});
 }
 else if (kind === 'cut') {
   sc = new CutScene(game, CUTS[name], () => {}); sc.enter();

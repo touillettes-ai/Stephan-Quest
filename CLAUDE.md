@@ -43,8 +43,8 @@ Pas de dépendances, pas de bundler. Les fichiers sont en `'use strict'` et part
 
 ## Contenu actuel (content.js)
 `STORY` = tableau de chapitres `{day, title, steps:[cinématique | niveau, ...]}` :
-J-15 Le logigramme (open space) · J-12 En route ! (train) · J-9 Déjeuner japonais · J-5 Charlie's · J-2 Dîner gastronomique · J-0 La fête de départ.
-⚠️ **Noms, dialogues et objectifs sont des PLACEHOLDERS** (Michel, Sophie, Karim, Nadia, Julien, Le Chef). À remplacer par les vrais (demander à l'utilisateur).
+J-15 En route vers le GTAR (train, Stephan seul, valise ouverte : slips/tee-shirts/pantalons) · J-14 Le logigramme (open space, 13 morceaux, le Chef = perso `chef` grand et chauve, Coline/Bastien/Olivier en cinématique) · J-9 Déjeuner japonais (vote Hoki Sushi / Charlie's / Cantine) · J-7 La crise (open space piraté, cyber à trouver, salle Mozart) · J-5 Charlie's · J-4 Dernier PI (carottes, chocolats, Matthieu-lapin qui fuit) · J-3 Le backlog (carte mère, Bastien suit Stephan, puis arène « coup de balai » contre les tickets HDR de Franck) · J-0 La fête de départ (collègues qui disent des gentillesses, Matthieu cowboy sur cheval gonflable à rattraper, porte, toast, puis jeu de danse DDR de 45 s sur « Dancing Queen »). Le dîner gastronomique a été supprimé.
+⚠️ **Noms, dialogues et objectifs sont des PLACEHOLDERS** (héros = Stephan ; les alias sophie/karim/nadia/julien pointent vers de vrais collègues, tous les persos de l'équipe sont dans CHARS). À remplacer par les vrais (demander à l'utilisateur).
 
 ## Créer un niveau
 Dans `LEVELS`, un objet :
@@ -70,6 +70,14 @@ Légende de la carte (17 lignes exactement) : `#` bloc · `=` plateforme travers
 
 Physique (`PHYS` dans engine.js) : vitesse 230, saut 640, gravité 1800, ressort 960. Pas de game over : chute/ennemi → retour au dernier café, compteur « Chutes » affiché en fin de niveau.
 Écraser un ennemi par-dessus = il disparaît ; contact latéral = aïe.
+
+**Dialogues pendant un niveau** : un objet peut déclencher une scène. Dans le niveau : `items:['papier','npc:lionel',…]` (`npc:clé` = un personnage de `CHARS` à trouver, posé sur une plateforme à la ligne p-1 ou sur le sol ligne 14) et
+`talks:{ 3:[['hero','texte'],['lionel','texte'],[null,'narration']] }` (clé = numéro de l'objet, la scène se joue au ramassage).
+
+**Poursuite** : `chase:{key,k,trigger,path:[[tx,ligneDeSol],…]}` + un `M` dans la carte = un perso qui bondit de plateforme en plateforme quand on s'approche ; une fois touché il suit le héros (voir `LEVELS.pi`). `follower:'clé'` = un compagnon qui suit le héros.
+**Arènes** (`ARENAS`, `type:'broom'`, classe `BroomScene`) : tickets lancés à balayer (Entrée/E), 4 touches = on recommence. Test visuel : `test/shot.html#broom/balai/9`.
+
+**Jeu de danse** (`ARENAS.danse`, `type:'dance'`, classe `DanceScene`) : flèches ←↓↑→ (ou QZSD) synchronisées avec `MUSIC.dancing` (js/music.js, **généré** depuis un fichier MIDI par un script : extrait de 45 s, notes jouées par un petit synthé WebAudio, flèches = notes de la mélodie). Réglages dans `DANCE` (engine.js) : 1 point par flèche, +10 toutes les 10 flèches réussies. Test visuel : `test/shot.html#dance/danse/14`.
 
 ## Créer une cinématique
 Dans `CUTS`, un script générateur ; `c` = API :
