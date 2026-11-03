@@ -43,6 +43,15 @@ window.addEventListener('load', () => {
   Device.init();
   Input.init();
   const canvas = document.getElementById('c');
+  // adapte le jeu à la zone réellement visible (barres d'adresse des navigateurs mobiles, rotation, plein écran)
+  const fit = () => {
+    const vv = window.visualViewport, w = vv ? vv.width : window.innerWidth, h = vv ? vv.height : window.innerHeight, s = Math.min(w / W, h / H);
+    canvas.style.width = Math.floor(W * s) + 'px'; canvas.style.height = Math.floor(H * s) + 'px';
+    document.documentElement.style.height = document.body.style.height = h + 'px';
+    window.scrollTo(0, 0);
+  };
+  fit(); window.addEventListener('resize', fit); window.addEventListener('orientationchange', () => { fit(); setTimeout(fit, 250); setTimeout(fit, 700); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
   const game = new Game(canvas);
   window.__game = game;
   game.afterFrame = TouchUI.sync.bind(TouchUI);

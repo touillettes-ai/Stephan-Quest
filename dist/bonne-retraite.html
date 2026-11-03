@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Bonne retraite !</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0d1a; overflow: hidden; touch-action: none; }
+  html, body { margin: 0; position: fixed; inset: 0; width: 100%; height: 100%; background: #0b0d1a; overflow: hidden; touch-action: none; overscroll-behavior: none; }
   body { display: flex; align-items: center; justify-content: center; }
-  canvas { width: min(100vw, calc(100vh * 960 / 544)); height: auto; aspect-ratio: 960 / 544; background: #000; image-rendering: auto; }
+  canvas { display: block; width: min(100vw, calc(100vh * 960 / 544)); height: auto; aspect-ratio: 960 / 544; background: #000; image-rendering: auto; }   /* la taille exacte est recalculée par main.js (fit) */
+  @supports (height: 100dvh) { canvas { width: min(100vw, calc(100dvh * 960 / 544)); } }
   html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   #touch { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 5; }
   #touch .g { position: absolute; display: flex; gap: 14px; pointer-events: auto; }
@@ -2659,6 +2660,15 @@ window.addEventListener('load', () => {
   Device.init();
   Input.init();
   const canvas = document.getElementById('c');
+  // adapte le jeu à la zone réellement visible (barres d'adresse des navigateurs mobiles, rotation, plein écran)
+  const fit = () => {
+    const vv = window.visualViewport, w = vv ? vv.width : window.innerWidth, h = vv ? vv.height : window.innerHeight, s = Math.min(w / W, h / H);
+    canvas.style.width = Math.floor(W * s) + 'px'; canvas.style.height = Math.floor(H * s) + 'px';
+    document.documentElement.style.height = document.body.style.height = h + 'px';
+    window.scrollTo(0, 0);
+  };
+  fit(); window.addEventListener('resize', fit); window.addEventListener('orientationchange', () => { fit(); setTimeout(fit, 250); setTimeout(fit, 700); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
   const game = new Game(canvas);
   window.__game = game;
   game.afterFrame = TouchUI.sync.bind(TouchUI);
