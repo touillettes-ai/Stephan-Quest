@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{position:fixed;left:0;top:0}</style></head>
+<body><canvas id="c" width="960" height="544"></canvas>
+<script src="../js/util.js"></script><script src="../js/draw.js"></script><script src="../js/engine.js"></script><script src="../js/content.js"></script>
+<script>
+// Page de test : #titre | #select | #level/NOM/xPixels | #cut/NOM/secondes  (rend UNE image puis s'arrête)
+const [kind, name, param] = location.hash.slice(1).split('/');
+const game = new Game(document.getElementById('c'));
+let sc;
+const step = (dt, keys) => { Input.pressed = keys || {}; sc.update(dt); Input.endFrame(); };
+if (kind === 'title') { sc = new TitleScene(game); sc.enter(); for (let i = 0; i < 45; i++) step(1 / 30); }
+else if (kind === 'select') { sc = new ChapterSelect(game); sc.enter(); sc.sel = +name || 0; step(1 / 30); }
+else if (kind === 'credits') { sc = new CreditsScene(game); sc.enter(); for (let i = 0; i < 150; i++) step(1 / 30); }
+else if (kind === 'level') {
+  sc = new LevelScene(game, LEVELS[name], () => {}, () => {}); sc.enter(); sc.p.inv = 999;
+  const px = +param || 0; if (px) { sc.p.x = px; sc.p.y = FLOOR_Y; sc.snapCam(); }
+  for (let i = 0; i < 45; i++) step(1 / 30, i === 30 ? { Space: true } : {});
+  Input.down = {}; sc.p.inv = 0; if (px) sc.t = 6;
+}
+else if (kind === 'cut') {
+  sc = new CutScene(game, CUTS[name], () => {}); sc.enter();
+  const T = +param || 3;
+  for (let i = 0; i < T * 30; i++) step(1 / 30, (i % 14 === 0 && i > 0 && sc.dlg && sc.dlg.shown >= sc.dlg.text.length) ? { Enter: true } : {});
+}
+game.scene = sc; game.draw();
+</script></body></html>

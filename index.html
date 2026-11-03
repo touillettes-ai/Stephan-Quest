@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Bonne retraite !</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d1a; overflow: hidden; touch-action: none; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { width: min(100vw, calc(100vh * 960 / 544)); height: auto; aspect-ratio: 960 / 544; background: #000; image-rendering: auto; }
+  #touch { display: none; position: fixed; left: 0; right: 0; bottom: 14px; padding: 0 16px; justify-content: space-between; pointer-events: none; }
+  #touch .grp { display: flex; gap: 12px; pointer-events: auto; }
+  #touch button { width: 72px; height: 72px; border-radius: 50%; border: 2px solid rgba(255,255,255,.7); background: rgba(20,24,50,.55); color: #fff; font: bold 26px sans-serif; user-select: none; -webkit-user-select: none; }
+  @media (pointer: coarse) { #touch { display: flex; } }
+</style>
+</head>
+<body>
+<canvas id="c" width="960" height="544"></canvas>
+<div id="touch">
+  <div class="grp"><button data-key="ArrowLeft">◀</button><button data-key="ArrowRight">▶</button></div>
+  <div class="grp"><button data-key="Enter">OK</button><button data-key="Space">⤒</button></div>
+</div>
+<!--SCRIPTS-->
+</body>
+</html>
