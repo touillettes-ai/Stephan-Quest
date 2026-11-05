@@ -88,7 +88,8 @@ function buildMap(cols, fn) {
 const LEVELS = {};
 
 LEVELS.logigramme = {
-  type: 'level', theme: 'openspace', title: 'Le logigramme',
+  type: 'level', bg: 'openspaceBrisee', theme: 'openspace',          // une fenêtre brisée : clin d'œil à la scène du train
+  title: 'Le logigramme',
   objective: 'Récupère tous les morceaux du logigramme (il est immense !) et file au bureau du Chef !',
   exitLabel: 'BUREAU DU CHEF',
   items: ['logi'], hazards: ['chair', 'mail'],
@@ -403,7 +404,7 @@ CUTS.j15_train_outro = {
 };
 
 CUTS.j14_bureau = {
-  type: 'cutscene', bg: 'openspace',
+  type: 'cutscene', bg: 'openspaceBrisee', theme: 'openspace',
   script: function* (c) {
     seat(c, 'coline', CHARS.coline, 200, 1, true);
     c.add('bastien', CHARS.bastien, 700, { face: -1 });
@@ -432,7 +433,7 @@ CUTS.j14_bureau = {
 };
 
 CUTS.j15_outro = {
-  type: 'cutscene', bg: 'openspace',
+  type: 'cutscene', bg: 'openspaceBrisee', theme: 'openspace',
   script: function* (c) {
     c.add('hero', CHARS.hero, 300, { state: 'idle' });
     c.add('chef', CHARS.chef, 640, { face: -1 });

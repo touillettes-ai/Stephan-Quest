@@ -790,6 +790,12 @@ BG.mozart = (ctx, cx, t) => {
   rect(ctx, 0, FLOOR_Y - 150, W, 6, 'rgba(0,0,0,.15)');
 };
 THEMES.mozart = THEMES.reunion;
+/* Open space avec une fenêtre brisée (chapitre « Le logigramme » : clin d'œil à Bastien et Olivier qui ont traversé la vitre du train) */
+BG.openspaceBrisee = (ctx, cx, t) => {
+  BG.openspace(ctx, cx, t);
+  par(cx, 0.15, 380, (x, i) => { if (i === 1) drawProp(ctx, { kind: 'vitrecassee', x: x + 20 + 165, y: 36 + 120, r: 58 }, t); });
+};
+THEMES.openspaceBrisee = THEMES.openspace;
 BG.train = (ctx, cx, t) => {
   vgrad(ctx, 0, H, '#dfe3e9', '#c3cad4');
   const sc = t * 150 + cx * 0.3;
