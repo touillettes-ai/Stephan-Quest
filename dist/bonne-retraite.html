@@ -3007,8 +3007,9 @@ CUTS.j15_train_bastien = {
     c.sfx('jump');
     yield [arc('olivier', 1160, -190, 1.7, 40, -1.05), arc('bastien', 1230, -230, 1.7, 40, -1.05)];
     c.remove('olivier'); c.remove('bastien');
-    c.pose('hero', 'idle'); c.face('hero', 1); c.emote('hero', '…', 2);
-    yield c.wait(1.4);
+    c.pose('hero', 'idle'); c.face('hero', 1); c.emote('hero', '…', 1.6);
+    yield c.wait(1.6);
+    yield c.say('hero', 'Quinze jours avant la retraite… Ils vont me manquer, ces cons.', { mood: 'sad' });
   },
 };
 
