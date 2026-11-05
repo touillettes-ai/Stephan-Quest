@@ -63,6 +63,7 @@ function wrapText(ctx, text, maxW, size) {
    hairStyle : 'short' | 'bald' | 'long' | 'bun' | 'curly' | 'cap' | 'helmet'
    état (state) : idle walk jump fall wave cheer sit hurt
    ============================================================ */
+const HEAD_SCALE = 1.35;   // grosseur de la tête (style « chibi ») : 1 = ancien dessin
 const CHAR_SCALE = 1.2;   // taille d'affichage globale des personnages
 function drawCharacter(ctx, ch, x, y, a) {
   a = a || {};
@@ -70,7 +71,11 @@ function drawCharacter(ctx, ch, x, y, a) {
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (!a.noShadow) ell(ctx, 0, 0, 13 * sc, 3.5 * sc, 'rgba(0,0,0,.18)');
-  ctx.scale(f * sc, sc * (a.squash || 1));
+  // squash & stretch (a.squash : < 1 écrasé, > 1 étiré) + petits mouvements « mignons » au repos, en marchant, en dansant
+  let sq = a.squash === undefined ? 1 : a.squash;
+  if (a.squash === undefined) { if (st === 'idle') sq = 1 + Math.sin(t * 2.2) * 0.012; else if (st === 'walk') sq = 1 + (Math.abs(Math.sin(t * 11)) - 0.5) * 0.05; else if (st === 'sit') sq = 1 + Math.sin(t * 1.6) * 0.01; }
+  ctx.scale(f * sc / Math.sqrt(sq), sc * sq);
+  if (st === 'cheer') ctx.rotate(Math.sin(t * 7) * 0.05);
   if (a.alpha !== undefined) ctx.globalAlpha = a.alpha;
   if (a.rot) { ctx.translate(0, -26); ctx.rotate(a.rot); ctx.translate(0, 26); }
 
@@ -86,23 +91,24 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'hurt':  aL = -2.2; aR = 2.2; lL = 0.4; lR = -0.4; break;
   }
   const skin = ch.skin || '#f0c8a0', top = ch.top || '#2f6db5', bot = ch.bottom || '#2c3440', shoe = ch.shoe || '#1b1b1b';
-  const hipY = -21 + low;
+  const hipY = -17 + low;                    // jambes raccourcies (corps plus petit, tête plus grosse)
 
   // jambes
   if (sit) {
-    limbO(ctx, -1, hipY, 1.45, 14, 7, shade(bot, -0.2)); limbO(ctx, 13, hipY + 1.6, 0, 9, 7, shade(bot, -0.2));
-    limbO(ctx, 1, hipY, 1.45, 14, 7, bot);               limbO(ctx, 15, hipY + 1.6, 0, 9, 7, bot);
+    limbO(ctx, -1, hipY, 1.45, 14, 7, shade(bot, -0.2)); limbO(ctx, 13, hipY + 1.6, 0, 5, 7, shade(bot, -0.2));
+    limbO(ctx, 1, hipY, 1.45, 14, 7, bot);               limbO(ctx, 15, hipY + 1.6, 0, 5, 7, bot);
     rr(ctx, 13, -3, 10, 5, 2.5, shoe, shade(shoe, 0.35), 0.8); rect(ctx, 14, 1.2, 8, 1.2, '#e8e8e8');
   } else {
-    limbO(ctx, -2.5, hipY, lR, 21, 7, shade(bot, -0.2));
-    if (ch.socks) limbO(ctx, -2.5 + Math.sin(lR) * 11, hipY + Math.cos(lR) * 11, lR, 10, 7, shade(ch.socks, -0.2));
-    rr(ctx, -2.5 + Math.sin(lR) * 21 - 3, hipY + Math.cos(lR) * 21 - 3, 10, 6, 3, shade(shoe, -0.1), shade(shoe, 0.35), 0.8);
-    limbO(ctx, 2.5, hipY, lL, 21, 7, bot);
-    if (ch.socks) limbO(ctx, 2.5 + Math.sin(lL) * 11, hipY + Math.cos(lL) * 11, lL, 10, 7, ch.socks);
-    rr(ctx, 2.5 + Math.sin(lL) * 21 - 3, hipY + Math.cos(lL) * 21 - 3, 10, 6, 3, shoe, shade(shoe, 0.35), 0.8);
-    rect(ctx, 2.5 + Math.sin(lL) * 21 - 2, hipY + Math.cos(lL) * 21 + 1.6, 8, 1.2, '#e8e8e8');
+    limbO(ctx, -2.5, hipY, lR, 17, 7, shade(bot, -0.2));
+    if (ch.socks) limbO(ctx, -2.5 + Math.sin(lR) * 9, hipY + Math.cos(lR) * 9, lR, 8, 7, shade(ch.socks, -0.2));
+    rr(ctx, -2.5 + Math.sin(lR) * 17 - 3, hipY + Math.cos(lR) * 17 - 3, 10, 6, 3, shade(shoe, -0.1), shade(shoe, 0.35), 0.8);
+    limbO(ctx, 2.5, hipY, lL, 17, 7, bot);
+    if (ch.socks) limbO(ctx, 2.5 + Math.sin(lL) * 9, hipY + Math.cos(lL) * 9, lL, 8, 7, ch.socks);
+    rr(ctx, 2.5 + Math.sin(lL) * 17 - 3, hipY + Math.cos(lL) * 17 - 3, 10, 6, 3, shoe, shade(shoe, 0.35), 0.8);
+    rect(ctx, 2.5 + Math.sin(lL) * 17 - 2, hipY + Math.cos(lL) * 17 + 1.6, 8, 1.2, '#e8e8e8');
   }
 
+  ctx.translate(0, 4);                       // torse, bras et tête
   // bras arrière + torse
   const shY = -39 + low + bob;
   limbO(ctx, -1, shY, aL, 17, 5.5, shade(top, -0.25));
@@ -127,8 +133,21 @@ function drawCharacter(ctx, ch, x, y, a) {
   if (ch.stripes) stripeLimb(ctx, 1, shY, aR, 17, 5.5, ch.stripes);
   hand(ctx, 1 + Math.sin(aR) * 17, shY + Math.cos(aR) * 17, skin);
 
-  // tête
+  // tête (grosse tête, ancrée sur les épaules)
   const hx = 1, hy = -53 + low + bob, hc = ch.hair || '#333', hs = ch.hairStyle || 'short';
+  let hr = 0, hdy = 0;                        // la tête suit le corps avec un léger retard : balancement, hochement, rebond
+  switch (st) {
+    case 'idle': hr = Math.sin(t * 1.7) * 0.04; hdy = Math.sin(t * 2.2 - 0.6) * 0.5; break;
+    case 'walk': hr = Math.sin(t * 11 - 0.9) * 0.07 - 0.02; hdy = Math.sin(t * 22 - 0.8) * 0.7; break;
+    case 'jump': hr = -0.1; break;
+    case 'fall': hr = 0.1; hdy = -1; break;
+    case 'cheer': hr = Math.sin(t * 7) * 0.1; break;
+    case 'wave': hr = Math.sin(t * 5) * 0.06; break;
+    case 'sit': hr = Math.sin(t * 1.3) * 0.035; break;
+    case 'hurt': hr = Math.sin(t * 30) * 0.08; break;
+  }
+  if (a.talking) hr += Math.sin(t * 9) * 0.035;
+  ctx.save(); ctx.translate(hx, hy + 11 + hdy); ctx.rotate(hr); ctx.scale(HEAD_SCALE, HEAD_SCALE); ctx.translate(-hx, -(hy + 11));
   if (hs === 'long') rr(ctx, hx - 13, hy - 6, 10, 26, 5, hc);
   if (hs === 'bun') circ(ctx, hx - 8, hy - 12, 5.5, hc);
   rect(ctx, hx - 3, hy + 6, 7, 8, shade(skin, -0.14));
@@ -141,17 +160,17 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'bald':  rr(ctx, hx - 10.8, hy - 3, 4, 6.5, 2, hc); break;
     case 'short': case 'long': case 'bun':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill();
-      rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc); break;
     case 'curly':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill();
       for (let i = 0; i < 6; i++) circ(ctx, hx - 9 + i * 3.6, hy - 11 + Math.sin(i * 1.7) * 1.5, 4.2, hc);
-      rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc); break;
     case 'cap':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 11, Math.PI, 6.2832); ctx.closePath(); ctx.fillStyle = cap; ctx.fill();
       rr(ctx, hx + 2, hy - 6, 13, 4, 2, shade(cap, -0.2));
-      rect(ctx, hx - 10.8, hy - 2.5, 4, 6, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4, 6, 2, hc); break;
     case 'cowboy':
-      ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill(); rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc);
+      ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill(); rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc);
       rr(ctx, hx - 16, hy - 9, 32, 3.8, 1.9, '#8a5a2b', '#4a2e12', 1); rr(ctx, hx - 8.5, hy - 20, 17, 12.5, 5, '#a8702f', '#4a2e12', 1); rect(ctx, hx - 8.5, hy - 12.5, 17, 2.4, '#4a2e12'); break;
     case 'helmet':
       ctx.beginPath(); ctx.arc(hx, hy - 2, 11.6, Math.PI, 6.2832); ctx.closePath(); ctx.fillStyle = '#f4c20d'; ctx.fill();
@@ -171,36 +190,60 @@ function drawCharacter(ctx, ch, x, y, a) {
     ctx.strokeStyle = shade(hc, -0.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.stroke();
     ctx.strokeStyle = shade(hc, 0.3); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(hx, hy - 2.5, 8, Math.PI + 0.5, 6.2832 - 1.5); ctx.stroke();
   }
-  // visage
-  const blink = (t % 4) < 0.12;
-  const ex1 = hx + 3.5, ex2 = hx + 8, ey = hy + 0.8;
-  circ(ctx, hx + 10, hy + 2.5, 1.8, shade(skin, -0.07));
-  if (ch.bunny) circ(ctx, hx + 10.4, hy + 2.6, 2.1, '#f4a6b8');
-  if (blink) { line(ctx, ex1 - 1.4, ey, ex1 + 1.4, ey, '#222', 1.2); line(ctx, ex2 - 1.4, ey, ex2 + 1.4, ey, '#222', 1.2); }
-  else for (const ex of [ex1, ex2]) { ell(ctx, ex, ey, 2.1, 2.6, '#fff'); circ(ctx, ex + 0.6, ey + 0.2, 1.55, '#1a1a1a'); circ(ctx, ex + 1.1, ey - 0.5, 0.6, '#fff'); }
-  line(ctx, ex1 - 2.4, ey - 4.6, ex1 + 2.2, ey - 4.2, shade(hc, -0.15), 1.3); line(ctx, ex2 - 2, ey - 4.2, ex2 + 2.6, ey - 4.6, shade(hc, -0.15), 1.3);
-  if (ch.lashes && !blink) for (const ex of [ex1, ex2]) { line(ctx, ex + 1.8, ey - 1.9, ex + 3, ey - 2.8, '#1a1a1a', 0.8); }
+  // visage : grands yeux, humeur (a.mood : happy | laugh | surprised | angry | sad), joues rondes
+  const mood = a.mood || (st === 'hurt' ? 'surprised' : st === 'cheer' ? 'laugh' : 'happy');
+  const blink = (t % 4) < 0.12 || mood === 'laugh';
+  const ex1 = hx + 3.2, ex2 = hx + 8.6, ey = hy + 1.0;
+  circ(ctx, hx + 10.2, hy + 3.4, 1.3, shade(skin, -0.08));
+  if (ch.bunny) circ(ctx, hx + 10.5, hy + 3.4, 1.9, '#f4a6b8');
+  for (const ex of [ex1, ex2]) {
+    if (blink) { ctx.strokeStyle = '#222'; ctx.lineWidth = 1.3; ctx.beginPath(); if (mood === 'laugh') ctx.arc(ex, ey + 1.4, 2.1, Math.PI * 1.1, Math.PI * 1.9); else { ctx.moveTo(ex - 2, ey); ctx.lineTo(ex + 2, ey); } ctx.stroke(); }
+    else {
+      const big = mood === 'surprised' ? 1.12 : 1;
+      ell(ctx, ex, ey, 2.5 * big, 3.1 * big, '#fff'); circ(ctx, ex + 0.7, ey + 0.3, (mood === 'surprised' ? 1.6 : 2.0), '#1a1a1a');
+      circ(ctx, ex + 1.5, ey - 0.8, 0.85, '#fff'); circ(ctx, ex - 0.3, ey + 1.3, 0.45, '#fff');
+    }
+  }
+  const bc = shade(hc, -0.15);
+  if (mood === 'angry') { line(ctx, ex1 - 2.4, ey - 5.8, ex1 + 2.2, ey - 3.9, bc, 1.5); line(ctx, ex2 - 2.2, ey - 3.9, ex2 + 2.6, ey - 5.8, bc, 1.5); }
+  else if (mood === 'sad') { line(ctx, ex1 - 2.4, ey - 3.9, ex1 + 2.2, ey - 5.6, bc, 1.4); line(ctx, ex2 - 2.2, ey - 5.6, ex2 + 2.6, ey - 3.9, bc, 1.4); }
+  else { const up = mood === 'surprised' ? -1.8 : 0; line(ctx, ex1 - 2.4, ey - 5.2 + up, ex1 + 2.2, ey - 5.5 + up, bc, 1.4); line(ctx, ex2 - 2.2, ey - 5.5 + up, ex2 + 2.6, ey - 5.2 + up, bc, 1.4); }
+  if (ch.lashes && !blink) for (const ex of [ex1, ex2]) line(ctx, ex + 2, ey - 2.5, ex + 3.4, ey - 3.5, '#1a1a1a', 0.9);
   if (ch.earring) { if (ch.hoop) { ctx.strokeStyle = ch.earring; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(hx - 9.5, hy + 6.5, 2.8, 0, 6.2832); ctx.stroke(); } else circ(ctx, hx - 9.5, hy + 4.6, 1.6, ch.earring); }
-  if (!ch.beard) ell(ctx, hx + 7, hy + 4.6, 2.4, 1.5, 'rgba(230,110,110,.3)');
+  if (!ch.beard) ell(ctx, hx + 6.8, hy + 5.8, 2.9, 1.8, 'rgba(255,110,125,.36)');
   if (ch.glasses) {
     const gc = ch.glassColor || '#1a1a1a';
     if (ch.glassShape === 'rect') {
-      for (const ex of [ex1, ex2 + 0.6]) rr(ctx, ex - 3.4, ey - 2.8, 6.8, 5.6, 1.6, 'rgba(255,255,255,.25)', gc, 1.5);
-      line(ctx, ex1 + 3.4, ey - 1, ex2 - 2.8, ey - 1, gc, 1.3); line(ctx, ex1 - 3.4, ey - 1, hx - 9, ey - 1.5, gc, 1.3);
+      for (const ex of [ex1, ex2 + 0.6]) rr(ctx, ex - 3.7, ey - 3.2, 7.4, 6.4, 1.8, 'rgba(255,255,255,.25)', gc, 1.5);
+      line(ctx, ex1 + 3.7, ey - 1, ex2 - 3.1, ey - 1, gc, 1.3); line(ctx, ex1 - 3.7, ey - 1, hx - 9, ey - 1.5, gc, 1.3);
     } else {
-    for (const ex of [ex1, ex2 + 0.6]) { circ(ctx, ex, ey, 3.1, 'rgba(255,255,255,.25)'); ctx.strokeStyle = gc; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(ex, ey, 3.1, 0, 6.2832); ctx.stroke(); }
-    line(ctx, ex1 + 3.1, ey, ex2 - 2.5, ey, gc, 1.3);
-    line(ctx, ex1 - 3.1, ey, hx - 9, ey - 0.5, gc, 1.3);
+      for (const ex of [ex1, ex2 + 0.6]) { circ(ctx, ex, ey, 3.6, 'rgba(255,255,255,.22)'); ctx.strokeStyle = gc; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(ex, ey, 3.6, 0, 6.2832); ctx.stroke(); }
+      line(ctx, ex1 + 3.6, ey, ex2 - 3, ey, gc, 1.3);
+      line(ctx, ex1 - 3.6, ey, hx - 9, ey - 0.5, gc, 1.3);
     }
   }
-  if (ch.beard) { ctx.beginPath(); ctx.arc(hx, hy + 1.5, 10.4, 0.2, Math.PI - 0.2); ctx.closePath(); ctx.fillStyle = hc; ctx.fill(); }
-  if (ch.mustache) rr(ctx, hx + 2.5, hy + 3.4, 8, 2.8, 1.3, hc);
-  if (a.talking) ell(ctx, hx + 6.5, hy + 7, 2.3, 1.2 + Math.abs(Math.sin(t * 14)) * 1.7, '#7a2b2b');
-  else if (!ch.beard) { ctx.strokeStyle = ch.lips || '#8a4040'; ctx.lineWidth = ch.lips ? 1.5 : 1.2; ctx.beginPath(); ctx.arc(hx + 6.5, hy + 4.2, 2.8, 0.25, Math.PI - 0.25); ctx.stroke(); }
+  if (ch.beard) {                                // barbe arrondie avec pattes
+    ctx.beginPath(); ctx.moveTo(hx - 9.8, hy + 0.5); ctx.quadraticCurveTo(hx - 11, hy + 12.5, hx, hy + 12.8); ctx.quadraticCurveTo(hx + 11, hy + 12.5, hx + 9.8, hy + 3.8);
+    ctx.quadraticCurveTo(hx + 6, hy + 5.6, hx + 2.5, hy + 4.6); ctx.quadraticCurveTo(hx - 4, hy + 5.2, hx - 9.8, hy + 0.5); ctx.closePath(); ctx.fillStyle = hc; ctx.fill();
+    ctx.strokeStyle = shade(hc, 0.25); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(hx - 5, hy + 9); ctx.quadraticCurveTo(hx, hy + 11, hx + 5, hy + 9.2); ctx.stroke();
+  }
+  if (ch.mustache) rr(ctx, hx + 2.5, hy + 4.8, 8, 2.8, 1.3, hc);
+  const mx = hx + 6.6, my = hy + 6.2;
+  if (a.talking) ell(ctx, mx, my + 1.2, 2.3, 1.2 + Math.abs(Math.sin(t * 14)) * 1.9, '#7a2b2b');
+  else if (mood === 'laugh') { ctx.beginPath(); ctx.arc(mx, my - 0.6, 3.1, 0, Math.PI); ctx.closePath(); ctx.fillStyle = '#7a2b2b'; ctx.fill(); ell(ctx, mx, my + 1.7, 1.7, 0.9, '#e8707a'); }
+  else if (mood === 'surprised') ell(ctx, mx, my + 1, 1.8, 2.4, '#7a2b2b');
+  else if (!ch.beard || mood === 'angry' || mood === 'sad') {
+    ctx.strokeStyle = ch.lips || '#8a4040'; ctx.lineWidth = ch.lips ? 1.5 : 1.2; ctx.beginPath();
+    if (mood === 'angry') { ctx.moveTo(mx - 2, my + 1.4); ctx.lineTo(mx + 2.2, my + 0.6); }
+    else if (mood === 'sad') ctx.arc(mx, my + 2.6, 2.4, Math.PI + 0.3, 6.2832 - 0.3);
+    else ctx.arc(mx, my - 1.4, 2.8, 0.25, Math.PI - 0.25);
+    ctx.stroke();
+  }
+  ctx.restore();   // fin du bloc tête
   ctx.restore();
 
   if (a.emote) {
-    const ex = x, ey = y - 80 * sc + Math.sin((a.t || 0) * 4) * 2;
+    const ex = x, ey = y - 87 * sc + Math.sin((a.t || 0) * 4) * 2;
     const word = String(a.emote).length > 2, bw = word ? 4.2 * String(a.emote).length + 7 : 32;
     rr(ctx, ex - bw / 2, ey - 22, bw, 24, 9, '#fff', '#333', 1.5);
     poly(ctx, [[ex - 4, ey + 1], [ex + 4, ey + 1], [ex, ey + 8]], '#fff');
@@ -209,14 +252,14 @@ function drawCharacter(ctx, ch, x, y, a) {
 }
 
 /* Buste pour la boîte de dialogue */
-function drawPortrait(ctx, ch, x, y, w, h, t, talking) {
+function drawPortrait(ctx, ch, x, y, w, h, t, talking, mood) {
   ctx.save();
   rr(ctx, x, y, w, h, 12, '#2d3a63');
   ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-  const sc = (ch.scale || 1) * CHAR_SCALE, s = h / 29 / sc;      // tête toujours à la même taille dans le cadre
-  ctx.translate(x + w / 2 - 3, y + h * 0.6);
+  const sc = (ch.scale || 1) * CHAR_SCALE, s = h / 38 / sc;      // tête toujours à la même taille dans le cadre
+  ctx.translate(x + w / 2 - 3, y + h * 0.62);
   ctx.scale(s, s);
-  drawCharacter(ctx, ch, 0, 53 * sc, { state: 'idle', t: t, talking: talking, noShadow: true });
+  drawCharacter(ctx, ch, 0, 49 * sc, { state: 'idle', t: t, talking: talking, noShadow: true, mood: mood });
   ctx.restore();
   rr(ctx, x, y, w, h, 12, null, '#8fa6ff', 2);
 }

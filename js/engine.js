@@ -10,6 +10,9 @@ function burst(list, x, y, n, colors, power) {
     list.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 90, life: rnd(0.7, 1.4), max: 1.4, size: rnd(3, 6), c: colors[i % colors.length], rot: rnd(0, 6) });
   }
 }
+function dust(list, x, y, n, dir) {            // petits nuages de poussière aux pieds (pas, saut, atterrissage)
+  for (let i = 0; i < n; i++) list.push({ x: x + rnd(-6, 6), y: y - 2, vx: -dir * rnd(15, 55) + rnd(-35, 35), vy: rnd(-45, -12), life: rnd(0.22, 0.42), max: 0.42, size: rnd(3, 5.5), c: '#e8e2d4', rot: rnd(0, 6), g: 60 });
+}
 function rain(list, n, colors) {
   for (let i = 0; i < n; i++) list.push({ x: rnd(0, W), y: rnd(-200, -10), vx: rnd(-30, 30), vy: rnd(60, 160), life: rnd(3, 6), max: 6, size: rnd(4, 7), c: colors[i % colors.length], rot: rnd(0, 6), g: 0 });
 }
@@ -92,7 +95,7 @@ function drawDialogue(ctx, d, t) {
   const bx = 24, by = 34, bw = W - 48, bh = 130;   // en haut de l'écran pour ne pas cacher les personnages
   rr(ctx, bx, by, bw, bh, 16, 'rgba(14,18,34,.93)', '#8fa6ff', 2);
   let tx = bx + 26;
-  if (d.ch) { drawPortrait(ctx, d.ch, bx + 14, by + 15, 100, 100, t, d.talking); tx = bx + 138; }
+  if (d.ch) { drawPortrait(ctx, d.ch, bx + 14, by + 15, 100, 100, t, d.talking, d.mood); tx = bx + 138; }
   let ty = by + 34;
   if (d.name) {
     rr(ctx, tx - 4, by - 14, ctx.measureText ? Math.max(90, d.name.length * 11 + 28) : 120, 26, 10, d.ch ? shade(d.ch.top || '#2f6db5', -0.1) : '#445', '#fff', 2);
@@ -161,13 +164,15 @@ class CutScene {
       pose(k, st) { A(k).state = st; },
       teleport(k, x, y) { const a = A(k); a.x = x; if (y !== undefined) a.y = y; },
       emote(k, text, sec) { const a = A(k); a.emote = text; a.emoteT = sec === undefined ? 0 : sec; return null; },   // s'éteint tout seul après `sec` secondes
-      jump(k, h) { const a = A(k), y0 = a.y; h = h || 34; Sfx.play('jump'); return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / 0.5); a.y = y0 - Math.sin(p * Math.PI) * h; a.state = p < 1 ? 'jump' : 'idle'; if (p >= 1) { a.y = y0; return true; } return false; } }; },
+      jump(k, h) { const a = A(k), y0 = a.y; h = h || 34; Sfx.play('jump'); return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / 0.5); a.y = y0 - Math.sin(p * Math.PI) * h; a.state = p < 1 ? 'jump' : 'idle'; a.squash = p < 0.12 ? 0.9 : p > 0.88 && p < 1 ? 0.88 : 1 + Math.sin(p * Math.PI) * 0.08; if (p >= 1) { a.y = y0; a.squash = undefined; return true; } return false; } }; },
       change(k, patch) { const a = A(k); a.ch = Object.assign({}, a.ch, patch); },
       /* --- dialogues --- */
+      mood(k, m) { A(k).mood = m; },                      // happy | laugh | surprised | angry | sad
       say(k, text, o) {
         o = o || {};
-        const a = k ? A(k) : null;
-        const d = { ch: a ? a.ch : null, name: o.name !== undefined ? o.name : (a ? a.name : null), text, shown: 0, last: 0, talking: true };
+        const a = k ? A(k) : null, prevMood = a ? a.mood : undefined;
+        if (a && o.mood) a.mood = o.mood;
+        const d = { ch: a ? a.ch : null, name: o.name !== undefined ? o.name : (a ? a.name : null), text, shown: 0, last: 0, talking: true, mood: o.mood };
         S.dlg = d;
         return { update(dt) {
           if (d.shown < text.length) {
@@ -179,7 +184,7 @@ class CutScene {
             return false;
           }
           if (a) a.talking = false; d.talking = false;
-          if (Input.confirm()) { S.dlg = null; return true; }
+          if (Input.confirm()) { S.dlg = null; if (a && o.mood) a.mood = prevMood; return true; }
           return false;
         } };
       },
@@ -221,7 +226,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);
@@ -324,7 +329,7 @@ class LevelScene {
     if (ax) p.face = ax;
     p.coyote = p.ground ? 0.1 : p.coyote - dt;
     p.jbuf = Input.jumpPressed() ? 0.12 : p.jbuf - dt;
-    if (p.jbuf > 0 && p.coyote > 0) { p.vy = -PHYS.jump; p.jbuf = 0; p.coyote = 0; p.ground = false; Sfx.play('jump'); }
+    if (p.jbuf > 0 && p.coyote > 0) { p.vy = -PHYS.jump; p.jbuf = 0; p.coyote = 0; p.ground = false; Sfx.play('jump'); p.stretch = 0.2; dust(this.parts, p.x, p.y, 5, 0); }
   }
   hurt(kind) {
     const p = this.p; if (p.dead > 0 || p.inv > 0 || this.done) return;
@@ -356,11 +361,15 @@ class LevelScene {
     const p = this.p;
     this.control(dt);
     const n = Math.max(1, Math.ceil(dt / (1 / 90))), h = dt / n;
+    const vy0 = p.vy, g0 = p.ground;
     for (let i = 0; i < n; i++) this.physics(h);
+    if (p.ground && !g0 && vy0 > 260 && p.dead <= 0) { p.land = 0.22; dust(this.parts, p.x, p.y, 8, 0); }
+    if (p.land > 0) p.land -= dt; if (p.stretch > 0) p.stretch -= dt;
     if (p.dead <= 0 && p.y > this.rows * TILE + 100) this.hurt('fall');
     if (p.dead > 0) { p.dead -= dt; if (p.dead <= 0) this.respawn(); }
     if (p.inv > 0) p.inv -= dt;
     p.t += dt;
+    if (p.ground && Math.abs(p.vx) > 60 && p.dead <= 0) { this.stepT = (this.stepT || 0) - dt; if (this.stepT <= 0) { this.stepT = 0.17; dust(this.parts, p.x - p.face * 8, p.y, 2, p.face); } }
     p.state = p.dead > 0 ? 'hurt' : !p.ground ? (p.vy < 0 ? 'jump' : 'fall') : Math.abs(p.vx) > 20 ? 'walk' : 'idle';
     this.entities(dt);
     if (this.def.follower) { this.trail.push({ t: this.t, x: p.x, y: p.y, face: p.face, state: p.state }); while (this.trail.length > 1 && this.trail[0].t < this.t - 1.2) this.trail.shift(); }
@@ -479,7 +488,8 @@ class LevelScene {
     for (const e of this.enemies) if (!e.alive && e.squash > 0.5) continue; else drawHazard(ctx, e.type, e.x, e.y, e.t, e.dir, !e.alive);
     if (this.def.follower && this.trail.length) { const tt = this.t - 0.45; let sm = this.trail[0]; for (const q of this.trail) { if (q.t <= tt) sm = q; else break; } drawCharacter(ctx, CHARS[this.def.follower], sm.x, sm.y, { facing: sm.face, state: sm.state, t: this.t }); }
     const p = this.p;
-    if (!(p.inv > 0 && p.dead <= 0 && Math.floor(this.t * 14) % 2 === 0)) drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: p.face, state: p.state, t: p.t, rot: p.dead > 0 ? p.rot : 0, noShadow: p.dead > 0 });
+    if (!(p.inv > 0 && p.dead <= 0 && Math.floor(this.t * 14) % 2 === 0)) { let sq = 1; if (p.land > 0) sq = 1 - 0.2 * (p.land / 0.22); else if (p.stretch > 0) sq = 1 + 0.14 * (p.stretch / 0.2); else if (!p.ground && p.dead <= 0) sq = 1 + Math.min(0.08, Math.abs(p.vy) / 7000);
+      drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: p.face, state: p.state, t: p.t, rot: p.dead > 0 ? p.rot : 0, noShadow: p.dead > 0, squash: sq === 1 ? undefined : sq }); }
     drawParticles(ctx, this.parts);
     ctx.restore();
     this.drawHUD(ctx);

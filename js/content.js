@@ -309,7 +309,7 @@ CUTS.j15_train = {
     c.prop('slip', 560, 300, { scale: 1.8 }); c.prop('tshirt', 640, 340, { scale: 1.8 }); c.prop('pantalon', 720, 290, { scale: 1.8 });
     yield c.wait(0.9);
     c.emote('hero', '!', 1.6); c.pose('hero', 'hurt');
-    yield c.say('hero', 'Ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !');
+    yield c.say('hero', 'Ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !', { mood: 'surprised' });
     c.pose('hero', 'idle');
     yield c.say(null, 'Mission : récupérer toute la garde-robe avant d\'arriver au GTAR.');
   },
@@ -350,8 +350,8 @@ CUTS.j14_bureau = {
     yield c.say('coline', 'Bon courage, Stephan !');
     c.emote('bastien', 'HA', 1.6); c.emote('olivier', 'HA', 1.6);
     c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer');
-    yield c.say('bastien', 'Hihi… un logigramme géant… hahaha !');
-    yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !');
+    yield c.say('bastien', 'Hihi… un logigramme géant… hahaha !', { mood: 'laugh' });
+    yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !', { mood: 'laugh' });
     c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
     yield c.say(null, 'Mission du jour : retrouver tous les morceaux du logigramme.');
   },
@@ -445,8 +445,8 @@ CUTS.j7_crise = {
     c.emote('hero', '!', 1.4);
     yield c.walk('chef', 560, 330);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'STEPHAN ! C\'est l\'heure d\'ouvrir une crise !');
-    yield c.say('chef', 'Nos serveurs sont tous compromis à cause de la CVE-2026-3569-8569 !');
+    yield c.say('chef', 'STEPHAN ! C\'est l\'heure d\'ouvrir une crise !', { mood: 'surprised' });
+    yield c.say('chef', 'Nos serveurs sont tous compromis à cause de la CVE-2026-3569-8569 !', { mood: 'surprised' });
     yield c.say('hero', 'Une crise cyber… à quelques jours de ma retraite. Évidemment.');
     yield c.say('chef', 'Va chercher les membres de la cyber, la mallette de crise et Bastien, puis rejoins-moi en salle Mozart !');
     c.pose('hero', 'wave');
@@ -536,20 +536,20 @@ CUTS.backlog_intro = {
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 430, 300);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !');
+    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !', { mood: 'surprised' });
     yield c.say('hero', 'Le backlog… Il me faut de l\'aide. Qui est dispo ?');
     yield c.say('chef', 'Bastien. Il est derrière.');
     yield c.walk('hero', 620, 170);
     yield* juggle(c, ball, 2);
     yield c.say('hero', 'Bastien ! Qu\'est-ce que tu fais ?');
-    yield c.say('bastien', 'Du sport collectif ! Olivier, attrape !');
+    yield c.say('bastien', 'Du sport collectif ! Olivier, attrape !', { mood: 'laugh' });
     yield* kick(c, ball, 890, FLOOR_Y - 70);
     c.pose('olivier', 'hurt'); c.emote('olivier', '!', 1.2); c.sfx('hurt');
-    yield c.say('olivier', 'Aïe ! Ma tête !');
+    yield c.say('olivier', 'Aïe ! Ma tête !', { mood: 'surprised' });
     c.pose('olivier', 'idle');
     yield c.say('hero', 'Le backlog a besoin de nous. Viens !');
     c.emote('bastien', '!', 1.2);
-    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…');
+    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…', { mood: 'surprised' });
     c.unprop(ball);
     yield [c.walk('hero', 190, 230), c.walk('bastien', 255, 230)];
     c.sfx('spring'); c.shake(0.5);
@@ -661,8 +661,8 @@ CUTS.j3_pi_salle = {
     c.add('cecile', CHARS.cecile, 520, { y: FLOOR_Y - 30, face: -1 });
     yield c.caption('Salle PI. Le dernier PI.', 2.2);
     c.emote('coline', '>:(', 5); c.emote('amelie', '>:(', 5);
-    yield c.say('coline', 'Matthieu n\'est toujours pas là ! Il est censé ouvrir le PI !');
-    yield c.say('amelie', 'Un RTE absent le jour du PI… C\'est inadmissible !');
+    yield c.say('coline', 'Matthieu n\'est toujours pas là ! Il est censé ouvrir le PI !', { mood: 'angry' });
+    yield c.say('amelie', 'Un RTE absent le jour du PI… C\'est inadmissible !', { mood: 'angry' });
     c.pose('cecile', 'wave');
     yield c.say('cecile', 'Bonjour à tous, et bienvenue à ce dernier PI ! Voici les livraisons du trimestre.');
     c.pose('cecile', 'idle');
@@ -718,7 +718,7 @@ CUTS.fete_intro = {
     yield c.say('olivier', 'Avec toi, tout est toujours conforme… à la bonne humeur.');
     yield c.say('chef', 'Quinze ans de bons et loyaux services. Tu as été un collègue précieux.');
     c.pose('hero', 'idle'); c.emote('hero', '♥', 2);
-    yield c.say('hero', 'Vous allez me faire pleurer…');
+    yield c.say('hero', 'Vous allez me faire pleurer…', { mood: 'sad' });
     c.pose('danila', 'wave');
     yield c.say('danila', 'C\'est bien sympa tout ça… mais où sont les pintes et les cadeaux ?');
     c.pose('danila', 'idle');
@@ -730,7 +730,7 @@ CUTS.fete_intro = {
     const horse = c.prop('cheval', 590, FLOOR_Y);
     const m = c.actors.matthieu; m.y = FLOOR_Y - 38; m.state = 'sit'; m.x = 584; m.z = 2;
     yield c.wait(0.6);
-    yield c.say('matthieu', 'YIHAAAAAAAAAA ! Vous ne retrouverez jamais les cadeaux !');
+    yield c.say('matthieu', 'YIHAAAAAAAAAA ! Vous ne retrouverez jamais les cadeaux !', { mood: 'laugh' });
     c.sfx('spring');
     yield* gallop(c, 'matthieu', horse, 1100, 1.4);
     c.remove('matthieu'); c.unprop(horse);

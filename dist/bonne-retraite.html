@@ -249,6 +249,7 @@ function wrapText(ctx, text, maxW, size) {
    hairStyle : 'short' | 'bald' | 'long' | 'bun' | 'curly' | 'cap' | 'helmet'
    état (state) : idle walk jump fall wave cheer sit hurt
    ============================================================ */
+const HEAD_SCALE = 1.35;   // grosseur de la tête (style « chibi ») : 1 = ancien dessin
 const CHAR_SCALE = 1.2;   // taille d'affichage globale des personnages
 function drawCharacter(ctx, ch, x, y, a) {
   a = a || {};
@@ -256,7 +257,11 @@ function drawCharacter(ctx, ch, x, y, a) {
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (!a.noShadow) ell(ctx, 0, 0, 13 * sc, 3.5 * sc, 'rgba(0,0,0,.18)');
-  ctx.scale(f * sc, sc * (a.squash || 1));
+  // squash & stretch (a.squash : < 1 écrasé, > 1 étiré) + petits mouvements « mignons » au repos, en marchant, en dansant
+  let sq = a.squash === undefined ? 1 : a.squash;
+  if (a.squash === undefined) { if (st === 'idle') sq = 1 + Math.sin(t * 2.2) * 0.012; else if (st === 'walk') sq = 1 + (Math.abs(Math.sin(t * 11)) - 0.5) * 0.05; else if (st === 'sit') sq = 1 + Math.sin(t * 1.6) * 0.01; }
+  ctx.scale(f * sc / Math.sqrt(sq), sc * sq);
+  if (st === 'cheer') ctx.rotate(Math.sin(t * 7) * 0.05);
   if (a.alpha !== undefined) ctx.globalAlpha = a.alpha;
   if (a.rot) { ctx.translate(0, -26); ctx.rotate(a.rot); ctx.translate(0, 26); }
 
@@ -272,23 +277,24 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'hurt':  aL = -2.2; aR = 2.2; lL = 0.4; lR = -0.4; break;
   }
   const skin = ch.skin || '#f0c8a0', top = ch.top || '#2f6db5', bot = ch.bottom || '#2c3440', shoe = ch.shoe || '#1b1b1b';
-  const hipY = -21 + low;
+  const hipY = -17 + low;                    // jambes raccourcies (corps plus petit, tête plus grosse)
 
   // jambes
   if (sit) {
-    limbO(ctx, -1, hipY, 1.45, 14, 7, shade(bot, -0.2)); limbO(ctx, 13, hipY + 1.6, 0, 9, 7, shade(bot, -0.2));
-    limbO(ctx, 1, hipY, 1.45, 14, 7, bot);               limbO(ctx, 15, hipY + 1.6, 0, 9, 7, bot);
+    limbO(ctx, -1, hipY, 1.45, 14, 7, shade(bot, -0.2)); limbO(ctx, 13, hipY + 1.6, 0, 5, 7, shade(bot, -0.2));
+    limbO(ctx, 1, hipY, 1.45, 14, 7, bot);               limbO(ctx, 15, hipY + 1.6, 0, 5, 7, bot);
     rr(ctx, 13, -3, 10, 5, 2.5, shoe, shade(shoe, 0.35), 0.8); rect(ctx, 14, 1.2, 8, 1.2, '#e8e8e8');
   } else {
-    limbO(ctx, -2.5, hipY, lR, 21, 7, shade(bot, -0.2));
-    if (ch.socks) limbO(ctx, -2.5 + Math.sin(lR) * 11, hipY + Math.cos(lR) * 11, lR, 10, 7, shade(ch.socks, -0.2));
-    rr(ctx, -2.5 + Math.sin(lR) * 21 - 3, hipY + Math.cos(lR) * 21 - 3, 10, 6, 3, shade(shoe, -0.1), shade(shoe, 0.35), 0.8);
-    limbO(ctx, 2.5, hipY, lL, 21, 7, bot);
-    if (ch.socks) limbO(ctx, 2.5 + Math.sin(lL) * 11, hipY + Math.cos(lL) * 11, lL, 10, 7, ch.socks);
-    rr(ctx, 2.5 + Math.sin(lL) * 21 - 3, hipY + Math.cos(lL) * 21 - 3, 10, 6, 3, shoe, shade(shoe, 0.35), 0.8);
-    rect(ctx, 2.5 + Math.sin(lL) * 21 - 2, hipY + Math.cos(lL) * 21 + 1.6, 8, 1.2, '#e8e8e8');
+    limbO(ctx, -2.5, hipY, lR, 17, 7, shade(bot, -0.2));
+    if (ch.socks) limbO(ctx, -2.5 + Math.sin(lR) * 9, hipY + Math.cos(lR) * 9, lR, 8, 7, shade(ch.socks, -0.2));
+    rr(ctx, -2.5 + Math.sin(lR) * 17 - 3, hipY + Math.cos(lR) * 17 - 3, 10, 6, 3, shade(shoe, -0.1), shade(shoe, 0.35), 0.8);
+    limbO(ctx, 2.5, hipY, lL, 17, 7, bot);
+    if (ch.socks) limbO(ctx, 2.5 + Math.sin(lL) * 9, hipY + Math.cos(lL) * 9, lL, 8, 7, ch.socks);
+    rr(ctx, 2.5 + Math.sin(lL) * 17 - 3, hipY + Math.cos(lL) * 17 - 3, 10, 6, 3, shoe, shade(shoe, 0.35), 0.8);
+    rect(ctx, 2.5 + Math.sin(lL) * 17 - 2, hipY + Math.cos(lL) * 17 + 1.6, 8, 1.2, '#e8e8e8');
   }
 
+  ctx.translate(0, 4);                       // torse, bras et tête
   // bras arrière + torse
   const shY = -39 + low + bob;
   limbO(ctx, -1, shY, aL, 17, 5.5, shade(top, -0.25));
@@ -313,8 +319,21 @@ function drawCharacter(ctx, ch, x, y, a) {
   if (ch.stripes) stripeLimb(ctx, 1, shY, aR, 17, 5.5, ch.stripes);
   hand(ctx, 1 + Math.sin(aR) * 17, shY + Math.cos(aR) * 17, skin);
 
-  // tête
+  // tête (grosse tête, ancrée sur les épaules)
   const hx = 1, hy = -53 + low + bob, hc = ch.hair || '#333', hs = ch.hairStyle || 'short';
+  let hr = 0, hdy = 0;                        // la tête suit le corps avec un léger retard : balancement, hochement, rebond
+  switch (st) {
+    case 'idle': hr = Math.sin(t * 1.7) * 0.04; hdy = Math.sin(t * 2.2 - 0.6) * 0.5; break;
+    case 'walk': hr = Math.sin(t * 11 - 0.9) * 0.07 - 0.02; hdy = Math.sin(t * 22 - 0.8) * 0.7; break;
+    case 'jump': hr = -0.1; break;
+    case 'fall': hr = 0.1; hdy = -1; break;
+    case 'cheer': hr = Math.sin(t * 7) * 0.1; break;
+    case 'wave': hr = Math.sin(t * 5) * 0.06; break;
+    case 'sit': hr = Math.sin(t * 1.3) * 0.035; break;
+    case 'hurt': hr = Math.sin(t * 30) * 0.08; break;
+  }
+  if (a.talking) hr += Math.sin(t * 9) * 0.035;
+  ctx.save(); ctx.translate(hx, hy + 11 + hdy); ctx.rotate(hr); ctx.scale(HEAD_SCALE, HEAD_SCALE); ctx.translate(-hx, -(hy + 11));
   if (hs === 'long') rr(ctx, hx - 13, hy - 6, 10, 26, 5, hc);
   if (hs === 'bun') circ(ctx, hx - 8, hy - 12, 5.5, hc);
   rect(ctx, hx - 3, hy + 6, 7, 8, shade(skin, -0.14));
@@ -327,17 +346,17 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'bald':  rr(ctx, hx - 10.8, hy - 3, 4, 6.5, 2, hc); break;
     case 'short': case 'long': case 'bun':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill();
-      rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc); break;
     case 'curly':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill();
       for (let i = 0; i < 6; i++) circ(ctx, hx - 9 + i * 3.6, hy - 11 + Math.sin(i * 1.7) * 1.5, 4.2, hc);
-      rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc); break;
     case 'cap':
       ctx.beginPath(); ctx.arc(hx, hy - 2.5, 11, Math.PI, 6.2832); ctx.closePath(); ctx.fillStyle = cap; ctx.fill();
       rr(ctx, hx + 2, hy - 6, 13, 4, 2, shade(cap, -0.2));
-      rect(ctx, hx - 10.8, hy - 2.5, 4, 6, hc); break;
+      rr(ctx, hx - 10.8, hy - 2.5, 4, 6, 2, hc); break;
     case 'cowboy':
-      ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill(); rect(ctx, hx - 10.8, hy - 2.5, 4.5, 9, hc);
+      ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.closePath(); ctx.fill(); rr(ctx, hx - 10.8, hy - 2.5, 4.5, 9, 2.2, hc);
       rr(ctx, hx - 16, hy - 9, 32, 3.8, 1.9, '#8a5a2b', '#4a2e12', 1); rr(ctx, hx - 8.5, hy - 20, 17, 12.5, 5, '#a8702f', '#4a2e12', 1); rect(ctx, hx - 8.5, hy - 12.5, 17, 2.4, '#4a2e12'); break;
     case 'helmet':
       ctx.beginPath(); ctx.arc(hx, hy - 2, 11.6, Math.PI, 6.2832); ctx.closePath(); ctx.fillStyle = '#f4c20d'; ctx.fill();
@@ -357,36 +376,60 @@ function drawCharacter(ctx, ch, x, y, a) {
     ctx.strokeStyle = shade(hc, -0.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy - 2.5, 10.8, Math.PI, 6.2832); ctx.stroke();
     ctx.strokeStyle = shade(hc, 0.3); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(hx, hy - 2.5, 8, Math.PI + 0.5, 6.2832 - 1.5); ctx.stroke();
   }
-  // visage
-  const blink = (t % 4) < 0.12;
-  const ex1 = hx + 3.5, ex2 = hx + 8, ey = hy + 0.8;
-  circ(ctx, hx + 10, hy + 2.5, 1.8, shade(skin, -0.07));
-  if (ch.bunny) circ(ctx, hx + 10.4, hy + 2.6, 2.1, '#f4a6b8');
-  if (blink) { line(ctx, ex1 - 1.4, ey, ex1 + 1.4, ey, '#222', 1.2); line(ctx, ex2 - 1.4, ey, ex2 + 1.4, ey, '#222', 1.2); }
-  else for (const ex of [ex1, ex2]) { ell(ctx, ex, ey, 2.1, 2.6, '#fff'); circ(ctx, ex + 0.6, ey + 0.2, 1.55, '#1a1a1a'); circ(ctx, ex + 1.1, ey - 0.5, 0.6, '#fff'); }
-  line(ctx, ex1 - 2.4, ey - 4.6, ex1 + 2.2, ey - 4.2, shade(hc, -0.15), 1.3); line(ctx, ex2 - 2, ey - 4.2, ex2 + 2.6, ey - 4.6, shade(hc, -0.15), 1.3);
-  if (ch.lashes && !blink) for (const ex of [ex1, ex2]) { line(ctx, ex + 1.8, ey - 1.9, ex + 3, ey - 2.8, '#1a1a1a', 0.8); }
+  // visage : grands yeux, humeur (a.mood : happy | laugh | surprised | angry | sad), joues rondes
+  const mood = a.mood || (st === 'hurt' ? 'surprised' : st === 'cheer' ? 'laugh' : 'happy');
+  const blink = (t % 4) < 0.12 || mood === 'laugh';
+  const ex1 = hx + 3.2, ex2 = hx + 8.6, ey = hy + 1.0;
+  circ(ctx, hx + 10.2, hy + 3.4, 1.3, shade(skin, -0.08));
+  if (ch.bunny) circ(ctx, hx + 10.5, hy + 3.4, 1.9, '#f4a6b8');
+  for (const ex of [ex1, ex2]) {
+    if (blink) { ctx.strokeStyle = '#222'; ctx.lineWidth = 1.3; ctx.beginPath(); if (mood === 'laugh') ctx.arc(ex, ey + 1.4, 2.1, Math.PI * 1.1, Math.PI * 1.9); else { ctx.moveTo(ex - 2, ey); ctx.lineTo(ex + 2, ey); } ctx.stroke(); }
+    else {
+      const big = mood === 'surprised' ? 1.12 : 1;
+      ell(ctx, ex, ey, 2.5 * big, 3.1 * big, '#fff'); circ(ctx, ex + 0.7, ey + 0.3, (mood === 'surprised' ? 1.6 : 2.0), '#1a1a1a');
+      circ(ctx, ex + 1.5, ey - 0.8, 0.85, '#fff'); circ(ctx, ex - 0.3, ey + 1.3, 0.45, '#fff');
+    }
+  }
+  const bc = shade(hc, -0.15);
+  if (mood === 'angry') { line(ctx, ex1 - 2.4, ey - 5.8, ex1 + 2.2, ey - 3.9, bc, 1.5); line(ctx, ex2 - 2.2, ey - 3.9, ex2 + 2.6, ey - 5.8, bc, 1.5); }
+  else if (mood === 'sad') { line(ctx, ex1 - 2.4, ey - 3.9, ex1 + 2.2, ey - 5.6, bc, 1.4); line(ctx, ex2 - 2.2, ey - 5.6, ex2 + 2.6, ey - 3.9, bc, 1.4); }
+  else { const up = mood === 'surprised' ? -1.8 : 0; line(ctx, ex1 - 2.4, ey - 5.2 + up, ex1 + 2.2, ey - 5.5 + up, bc, 1.4); line(ctx, ex2 - 2.2, ey - 5.5 + up, ex2 + 2.6, ey - 5.2 + up, bc, 1.4); }
+  if (ch.lashes && !blink) for (const ex of [ex1, ex2]) line(ctx, ex + 2, ey - 2.5, ex + 3.4, ey - 3.5, '#1a1a1a', 0.9);
   if (ch.earring) { if (ch.hoop) { ctx.strokeStyle = ch.earring; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(hx - 9.5, hy + 6.5, 2.8, 0, 6.2832); ctx.stroke(); } else circ(ctx, hx - 9.5, hy + 4.6, 1.6, ch.earring); }
-  if (!ch.beard) ell(ctx, hx + 7, hy + 4.6, 2.4, 1.5, 'rgba(230,110,110,.3)');
+  if (!ch.beard) ell(ctx, hx + 6.8, hy + 5.8, 2.9, 1.8, 'rgba(255,110,125,.36)');
   if (ch.glasses) {
     const gc = ch.glassColor || '#1a1a1a';
     if (ch.glassShape === 'rect') {
-      for (const ex of [ex1, ex2 + 0.6]) rr(ctx, ex - 3.4, ey - 2.8, 6.8, 5.6, 1.6, 'rgba(255,255,255,.25)', gc, 1.5);
-      line(ctx, ex1 + 3.4, ey - 1, ex2 - 2.8, ey - 1, gc, 1.3); line(ctx, ex1 - 3.4, ey - 1, hx - 9, ey - 1.5, gc, 1.3);
+      for (const ex of [ex1, ex2 + 0.6]) rr(ctx, ex - 3.7, ey - 3.2, 7.4, 6.4, 1.8, 'rgba(255,255,255,.25)', gc, 1.5);
+      line(ctx, ex1 + 3.7, ey - 1, ex2 - 3.1, ey - 1, gc, 1.3); line(ctx, ex1 - 3.7, ey - 1, hx - 9, ey - 1.5, gc, 1.3);
     } else {
-    for (const ex of [ex1, ex2 + 0.6]) { circ(ctx, ex, ey, 3.1, 'rgba(255,255,255,.25)'); ctx.strokeStyle = gc; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(ex, ey, 3.1, 0, 6.2832); ctx.stroke(); }
-    line(ctx, ex1 + 3.1, ey, ex2 - 2.5, ey, gc, 1.3);
-    line(ctx, ex1 - 3.1, ey, hx - 9, ey - 0.5, gc, 1.3);
+      for (const ex of [ex1, ex2 + 0.6]) { circ(ctx, ex, ey, 3.6, 'rgba(255,255,255,.22)'); ctx.strokeStyle = gc; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(ex, ey, 3.6, 0, 6.2832); ctx.stroke(); }
+      line(ctx, ex1 + 3.6, ey, ex2 - 3, ey, gc, 1.3);
+      line(ctx, ex1 - 3.6, ey, hx - 9, ey - 0.5, gc, 1.3);
     }
   }
-  if (ch.beard) { ctx.beginPath(); ctx.arc(hx, hy + 1.5, 10.4, 0.2, Math.PI - 0.2); ctx.closePath(); ctx.fillStyle = hc; ctx.fill(); }
-  if (ch.mustache) rr(ctx, hx + 2.5, hy + 3.4, 8, 2.8, 1.3, hc);
-  if (a.talking) ell(ctx, hx + 6.5, hy + 7, 2.3, 1.2 + Math.abs(Math.sin(t * 14)) * 1.7, '#7a2b2b');
-  else if (!ch.beard) { ctx.strokeStyle = ch.lips || '#8a4040'; ctx.lineWidth = ch.lips ? 1.5 : 1.2; ctx.beginPath(); ctx.arc(hx + 6.5, hy + 4.2, 2.8, 0.25, Math.PI - 0.25); ctx.stroke(); }
+  if (ch.beard) {                                // barbe arrondie avec pattes
+    ctx.beginPath(); ctx.moveTo(hx - 9.8, hy + 0.5); ctx.quadraticCurveTo(hx - 11, hy + 12.5, hx, hy + 12.8); ctx.quadraticCurveTo(hx + 11, hy + 12.5, hx + 9.8, hy + 3.8);
+    ctx.quadraticCurveTo(hx + 6, hy + 5.6, hx + 2.5, hy + 4.6); ctx.quadraticCurveTo(hx - 4, hy + 5.2, hx - 9.8, hy + 0.5); ctx.closePath(); ctx.fillStyle = hc; ctx.fill();
+    ctx.strokeStyle = shade(hc, 0.25); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(hx - 5, hy + 9); ctx.quadraticCurveTo(hx, hy + 11, hx + 5, hy + 9.2); ctx.stroke();
+  }
+  if (ch.mustache) rr(ctx, hx + 2.5, hy + 4.8, 8, 2.8, 1.3, hc);
+  const mx = hx + 6.6, my = hy + 6.2;
+  if (a.talking) ell(ctx, mx, my + 1.2, 2.3, 1.2 + Math.abs(Math.sin(t * 14)) * 1.9, '#7a2b2b');
+  else if (mood === 'laugh') { ctx.beginPath(); ctx.arc(mx, my - 0.6, 3.1, 0, Math.PI); ctx.closePath(); ctx.fillStyle = '#7a2b2b'; ctx.fill(); ell(ctx, mx, my + 1.7, 1.7, 0.9, '#e8707a'); }
+  else if (mood === 'surprised') ell(ctx, mx, my + 1, 1.8, 2.4, '#7a2b2b');
+  else if (!ch.beard || mood === 'angry' || mood === 'sad') {
+    ctx.strokeStyle = ch.lips || '#8a4040'; ctx.lineWidth = ch.lips ? 1.5 : 1.2; ctx.beginPath();
+    if (mood === 'angry') { ctx.moveTo(mx - 2, my + 1.4); ctx.lineTo(mx + 2.2, my + 0.6); }
+    else if (mood === 'sad') ctx.arc(mx, my + 2.6, 2.4, Math.PI + 0.3, 6.2832 - 0.3);
+    else ctx.arc(mx, my - 1.4, 2.8, 0.25, Math.PI - 0.25);
+    ctx.stroke();
+  }
+  ctx.restore();   // fin du bloc tête
   ctx.restore();
 
   if (a.emote) {
-    const ex = x, ey = y - 80 * sc + Math.sin((a.t || 0) * 4) * 2;
+    const ex = x, ey = y - 87 * sc + Math.sin((a.t || 0) * 4) * 2;
     const word = String(a.emote).length > 2, bw = word ? 4.2 * String(a.emote).length + 7 : 32;
     rr(ctx, ex - bw / 2, ey - 22, bw, 24, 9, '#fff', '#333', 1.5);
     poly(ctx, [[ex - 4, ey + 1], [ex + 4, ey + 1], [ex, ey + 8]], '#fff');
@@ -395,14 +438,14 @@ function drawCharacter(ctx, ch, x, y, a) {
 }
 
 /* Buste pour la boîte de dialogue */
-function drawPortrait(ctx, ch, x, y, w, h, t, talking) {
+function drawPortrait(ctx, ch, x, y, w, h, t, talking, mood) {
   ctx.save();
   rr(ctx, x, y, w, h, 12, '#2d3a63');
   ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-  const sc = (ch.scale || 1) * CHAR_SCALE, s = h / 29 / sc;      // tête toujours à la même taille dans le cadre
-  ctx.translate(x + w / 2 - 3, y + h * 0.6);
+  const sc = (ch.scale || 1) * CHAR_SCALE, s = h / 38 / sc;      // tête toujours à la même taille dans le cadre
+  ctx.translate(x + w / 2 - 3, y + h * 0.62);
   ctx.scale(s, s);
-  drawCharacter(ctx, ch, 0, 53 * sc, { state: 'idle', t: t, talking: talking, noShadow: true });
+  drawCharacter(ctx, ch, 0, 49 * sc, { state: 'idle', t: t, talking: talking, noShadow: true, mood: mood });
   ctx.restore();
   rr(ctx, x, y, w, h, 12, null, '#8fa6ff', 2);
 }
@@ -955,6 +998,9 @@ function burst(list, x, y, n, colors, power) {
     list.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 90, life: rnd(0.7, 1.4), max: 1.4, size: rnd(3, 6), c: colors[i % colors.length], rot: rnd(0, 6) });
   }
 }
+function dust(list, x, y, n, dir) {            // petits nuages de poussière aux pieds (pas, saut, atterrissage)
+  for (let i = 0; i < n; i++) list.push({ x: x + rnd(-6, 6), y: y - 2, vx: -dir * rnd(15, 55) + rnd(-35, 35), vy: rnd(-45, -12), life: rnd(0.22, 0.42), max: 0.42, size: rnd(3, 5.5), c: '#e8e2d4', rot: rnd(0, 6), g: 60 });
+}
 function rain(list, n, colors) {
   for (let i = 0; i < n; i++) list.push({ x: rnd(0, W), y: rnd(-200, -10), vx: rnd(-30, 30), vy: rnd(60, 160), life: rnd(3, 6), max: 6, size: rnd(4, 7), c: colors[i % colors.length], rot: rnd(0, 6), g: 0 });
 }
@@ -1037,7 +1083,7 @@ function drawDialogue(ctx, d, t) {
   const bx = 24, by = 34, bw = W - 48, bh = 130;   // en haut de l'écran pour ne pas cacher les personnages
   rr(ctx, bx, by, bw, bh, 16, 'rgba(14,18,34,.93)', '#8fa6ff', 2);
   let tx = bx + 26;
-  if (d.ch) { drawPortrait(ctx, d.ch, bx + 14, by + 15, 100, 100, t, d.talking); tx = bx + 138; }
+  if (d.ch) { drawPortrait(ctx, d.ch, bx + 14, by + 15, 100, 100, t, d.talking, d.mood); tx = bx + 138; }
   let ty = by + 34;
   if (d.name) {
     rr(ctx, tx - 4, by - 14, ctx.measureText ? Math.max(90, d.name.length * 11 + 28) : 120, 26, 10, d.ch ? shade(d.ch.top || '#2f6db5', -0.1) : '#445', '#fff', 2);
@@ -1106,13 +1152,15 @@ class CutScene {
       pose(k, st) { A(k).state = st; },
       teleport(k, x, y) { const a = A(k); a.x = x; if (y !== undefined) a.y = y; },
       emote(k, text, sec) { const a = A(k); a.emote = text; a.emoteT = sec === undefined ? 0 : sec; return null; },   // s'éteint tout seul après `sec` secondes
-      jump(k, h) { const a = A(k), y0 = a.y; h = h || 34; Sfx.play('jump'); return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / 0.5); a.y = y0 - Math.sin(p * Math.PI) * h; a.state = p < 1 ? 'jump' : 'idle'; if (p >= 1) { a.y = y0; return true; } return false; } }; },
+      jump(k, h) { const a = A(k), y0 = a.y; h = h || 34; Sfx.play('jump'); return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / 0.5); a.y = y0 - Math.sin(p * Math.PI) * h; a.state = p < 1 ? 'jump' : 'idle'; a.squash = p < 0.12 ? 0.9 : p > 0.88 && p < 1 ? 0.88 : 1 + Math.sin(p * Math.PI) * 0.08; if (p >= 1) { a.y = y0; a.squash = undefined; return true; } return false; } }; },
       change(k, patch) { const a = A(k); a.ch = Object.assign({}, a.ch, patch); },
       /* --- dialogues --- */
+      mood(k, m) { A(k).mood = m; },                      // happy | laugh | surprised | angry | sad
       say(k, text, o) {
         o = o || {};
-        const a = k ? A(k) : null;
-        const d = { ch: a ? a.ch : null, name: o.name !== undefined ? o.name : (a ? a.name : null), text, shown: 0, last: 0, talking: true };
+        const a = k ? A(k) : null, prevMood = a ? a.mood : undefined;
+        if (a && o.mood) a.mood = o.mood;
+        const d = { ch: a ? a.ch : null, name: o.name !== undefined ? o.name : (a ? a.name : null), text, shown: 0, last: 0, talking: true, mood: o.mood };
         S.dlg = d;
         return { update(dt) {
           if (d.shown < text.length) {
@@ -1124,7 +1172,7 @@ class CutScene {
             return false;
           }
           if (a) a.talking = false; d.talking = false;
-          if (Input.confirm()) { S.dlg = null; return true; }
+          if (Input.confirm()) { S.dlg = null; if (a && o.mood) a.mood = prevMood; return true; }
           return false;
         } };
       },
@@ -1166,7 +1214,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);
@@ -1269,7 +1317,7 @@ class LevelScene {
     if (ax) p.face = ax;
     p.coyote = p.ground ? 0.1 : p.coyote - dt;
     p.jbuf = Input.jumpPressed() ? 0.12 : p.jbuf - dt;
-    if (p.jbuf > 0 && p.coyote > 0) { p.vy = -PHYS.jump; p.jbuf = 0; p.coyote = 0; p.ground = false; Sfx.play('jump'); }
+    if (p.jbuf > 0 && p.coyote > 0) { p.vy = -PHYS.jump; p.jbuf = 0; p.coyote = 0; p.ground = false; Sfx.play('jump'); p.stretch = 0.2; dust(this.parts, p.x, p.y, 5, 0); }
   }
   hurt(kind) {
     const p = this.p; if (p.dead > 0 || p.inv > 0 || this.done) return;
@@ -1301,11 +1349,15 @@ class LevelScene {
     const p = this.p;
     this.control(dt);
     const n = Math.max(1, Math.ceil(dt / (1 / 90))), h = dt / n;
+    const vy0 = p.vy, g0 = p.ground;
     for (let i = 0; i < n; i++) this.physics(h);
+    if (p.ground && !g0 && vy0 > 260 && p.dead <= 0) { p.land = 0.22; dust(this.parts, p.x, p.y, 8, 0); }
+    if (p.land > 0) p.land -= dt; if (p.stretch > 0) p.stretch -= dt;
     if (p.dead <= 0 && p.y > this.rows * TILE + 100) this.hurt('fall');
     if (p.dead > 0) { p.dead -= dt; if (p.dead <= 0) this.respawn(); }
     if (p.inv > 0) p.inv -= dt;
     p.t += dt;
+    if (p.ground && Math.abs(p.vx) > 60 && p.dead <= 0) { this.stepT = (this.stepT || 0) - dt; if (this.stepT <= 0) { this.stepT = 0.17; dust(this.parts, p.x - p.face * 8, p.y, 2, p.face); } }
     p.state = p.dead > 0 ? 'hurt' : !p.ground ? (p.vy < 0 ? 'jump' : 'fall') : Math.abs(p.vx) > 20 ? 'walk' : 'idle';
     this.entities(dt);
     if (this.def.follower) { this.trail.push({ t: this.t, x: p.x, y: p.y, face: p.face, state: p.state }); while (this.trail.length > 1 && this.trail[0].t < this.t - 1.2) this.trail.shift(); }
@@ -1424,7 +1476,8 @@ class LevelScene {
     for (const e of this.enemies) if (!e.alive && e.squash > 0.5) continue; else drawHazard(ctx, e.type, e.x, e.y, e.t, e.dir, !e.alive);
     if (this.def.follower && this.trail.length) { const tt = this.t - 0.45; let sm = this.trail[0]; for (const q of this.trail) { if (q.t <= tt) sm = q; else break; } drawCharacter(ctx, CHARS[this.def.follower], sm.x, sm.y, { facing: sm.face, state: sm.state, t: this.t }); }
     const p = this.p;
-    if (!(p.inv > 0 && p.dead <= 0 && Math.floor(this.t * 14) % 2 === 0)) drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: p.face, state: p.state, t: p.t, rot: p.dead > 0 ? p.rot : 0, noShadow: p.dead > 0 });
+    if (!(p.inv > 0 && p.dead <= 0 && Math.floor(this.t * 14) % 2 === 0)) { let sq = 1; if (p.land > 0) sq = 1 - 0.2 * (p.land / 0.22); else if (p.stretch > 0) sq = 1 + 0.14 * (p.stretch / 0.2); else if (!p.ground && p.dead <= 0) sq = 1 + Math.min(0.08, Math.abs(p.vy) / 7000);
+      drawCharacter(ctx, CHARS.hero, p.x, p.y, { facing: p.face, state: p.state, t: p.t, rot: p.dead > 0 ? p.rot : 0, noShadow: p.dead > 0, squash: sq === 1 ? undefined : sq }); }
     drawParticles(ctx, this.parts);
     ctx.restore();
     this.drawHUD(ctx);
@@ -2089,7 +2142,7 @@ CUTS.j15_train = {
     c.prop('slip', 560, 300, { scale: 1.8 }); c.prop('tshirt', 640, 340, { scale: 1.8 }); c.prop('pantalon', 720, 290, { scale: 1.8 });
     yield c.wait(0.9);
     c.emote('hero', '!', 1.6); c.pose('hero', 'hurt');
-    yield c.say('hero', 'Ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !');
+    yield c.say('hero', 'Ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !', { mood: 'surprised' });
     c.pose('hero', 'idle');
     yield c.say(null, 'Mission : récupérer toute la garde-robe avant d\'arriver au GTAR.');
   },
@@ -2130,8 +2183,8 @@ CUTS.j14_bureau = {
     yield c.say('coline', 'Bon courage, Stephan !');
     c.emote('bastien', 'HA', 1.6); c.emote('olivier', 'HA', 1.6);
     c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer');
-    yield c.say('bastien', 'Hihi… un logigramme géant… hahaha !');
-    yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !');
+    yield c.say('bastien', 'Hihi… un logigramme géant… hahaha !', { mood: 'laugh' });
+    yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !', { mood: 'laugh' });
     c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
     yield c.say(null, 'Mission du jour : retrouver tous les morceaux du logigramme.');
   },
@@ -2225,8 +2278,8 @@ CUTS.j7_crise = {
     c.emote('hero', '!', 1.4);
     yield c.walk('chef', 560, 330);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'STEPHAN ! C\'est l\'heure d\'ouvrir une crise !');
-    yield c.say('chef', 'Nos serveurs sont tous compromis à cause de la CVE-2026-3569-8569 !');
+    yield c.say('chef', 'STEPHAN ! C\'est l\'heure d\'ouvrir une crise !', { mood: 'surprised' });
+    yield c.say('chef', 'Nos serveurs sont tous compromis à cause de la CVE-2026-3569-8569 !', { mood: 'surprised' });
     yield c.say('hero', 'Une crise cyber… à quelques jours de ma retraite. Évidemment.');
     yield c.say('chef', 'Va chercher les membres de la cyber, la mallette de crise et Bastien, puis rejoins-moi en salle Mozart !');
     c.pose('hero', 'wave');
@@ -2316,20 +2369,20 @@ CUTS.backlog_intro = {
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 430, 300);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !');
+    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !', { mood: 'surprised' });
     yield c.say('hero', 'Le backlog… Il me faut de l\'aide. Qui est dispo ?');
     yield c.say('chef', 'Bastien. Il est derrière.');
     yield c.walk('hero', 620, 170);
     yield* juggle(c, ball, 2);
     yield c.say('hero', 'Bastien ! Qu\'est-ce que tu fais ?');
-    yield c.say('bastien', 'Du sport collectif ! Olivier, attrape !');
+    yield c.say('bastien', 'Du sport collectif ! Olivier, attrape !', { mood: 'laugh' });
     yield* kick(c, ball, 890, FLOOR_Y - 70);
     c.pose('olivier', 'hurt'); c.emote('olivier', '!', 1.2); c.sfx('hurt');
-    yield c.say('olivier', 'Aïe ! Ma tête !');
+    yield c.say('olivier', 'Aïe ! Ma tête !', { mood: 'surprised' });
     c.pose('olivier', 'idle');
     yield c.say('hero', 'Le backlog a besoin de nous. Viens !');
     c.emote('bastien', '!', 1.2);
-    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…');
+    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…', { mood: 'surprised' });
     c.unprop(ball);
     yield [c.walk('hero', 190, 230), c.walk('bastien', 255, 230)];
     c.sfx('spring'); c.shake(0.5);
@@ -2441,8 +2494,8 @@ CUTS.j3_pi_salle = {
     c.add('cecile', CHARS.cecile, 520, { y: FLOOR_Y - 30, face: -1 });
     yield c.caption('Salle PI. Le dernier PI.', 2.2);
     c.emote('coline', '>:(', 5); c.emote('amelie', '>:(', 5);
-    yield c.say('coline', 'Matthieu n\'est toujours pas là ! Il est censé ouvrir le PI !');
-    yield c.say('amelie', 'Un RTE absent le jour du PI… C\'est inadmissible !');
+    yield c.say('coline', 'Matthieu n\'est toujours pas là ! Il est censé ouvrir le PI !', { mood: 'angry' });
+    yield c.say('amelie', 'Un RTE absent le jour du PI… C\'est inadmissible !', { mood: 'angry' });
     c.pose('cecile', 'wave');
     yield c.say('cecile', 'Bonjour à tous, et bienvenue à ce dernier PI ! Voici les livraisons du trimestre.');
     c.pose('cecile', 'idle');
@@ -2498,7 +2551,7 @@ CUTS.fete_intro = {
     yield c.say('olivier', 'Avec toi, tout est toujours conforme… à la bonne humeur.');
     yield c.say('chef', 'Quinze ans de bons et loyaux services. Tu as été un collègue précieux.');
     c.pose('hero', 'idle'); c.emote('hero', '♥', 2);
-    yield c.say('hero', 'Vous allez me faire pleurer…');
+    yield c.say('hero', 'Vous allez me faire pleurer…', { mood: 'sad' });
     c.pose('danila', 'wave');
     yield c.say('danila', 'C\'est bien sympa tout ça… mais où sont les pintes et les cadeaux ?');
     c.pose('danila', 'idle');
@@ -2510,7 +2563,7 @@ CUTS.fete_intro = {
     const horse = c.prop('cheval', 590, FLOOR_Y);
     const m = c.actors.matthieu; m.y = FLOOR_Y - 38; m.state = 'sit'; m.x = 584; m.z = 2;
     yield c.wait(0.6);
-    yield c.say('matthieu', 'YIHAAAAAAAAAA ! Vous ne retrouverez jamais les cadeaux !');
+    yield c.say('matthieu', 'YIHAAAAAAAAAA ! Vous ne retrouverez jamais les cadeaux !', { mood: 'laugh' });
     c.sfx('spring');
     yield* gallop(c, 'matthieu', horse, 1100, 1.4);
     c.remove('matthieu'); c.unprop(horse);

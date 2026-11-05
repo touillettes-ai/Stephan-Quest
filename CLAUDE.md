@@ -99,6 +99,8 @@ La boîte de dialogue est **en haut** de l'écran pour ne pas cacher les personn
 hairStyle : `short | bald | long | bun | curly | cap | helmet` (helmet = casque de chantier jaune).
 **Couleurs en hexadécimal à 6 chiffres** (`shade()` ne gère pas `#fff`).
 Personnage de profil uniquement (regarde à droite, miroir via `facing`).
+Style « chibi » : grosse tête réglable via `HEAD_SCALE` (draw.js, 1 = ancien dessin), taille globale `CHAR_SCALE`. Humeurs : `c.say('k','texte',{mood:'laugh'})` ou `c.mood('k','angry')` (happy | laugh | surprised | angry | sad) ; `pose cheer` = rire, `pose hurt` = surpris.
+Mouvements « mignons » (dans `drawCharacter`) : respiration au repos, tête qui se balance / hoche en parlant / rebondit en marchant, squash & stretch (`a.squash`, utilisé au saut du héros et par `c.jump`), poussière aux pas, aux sauts et aux atterrissages (`dust()` dans engine.js).
 
 ## Ajouter un élément
 - **Nouvel environnement** : ajouter `BG.nom = (ctx, camX, t) => {…}` (utiliser `par(cx, facteurParallaxe, période, fn)`) + une entrée dans `THEMES` (+ motif de sol dans `drawTile`). Sol de référence à y=480.
