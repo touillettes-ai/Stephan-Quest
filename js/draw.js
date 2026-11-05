@@ -222,17 +222,19 @@ function drawCharacter(ctx, ch, x, y, a) {
       line(ctx, ex1 - 3.6, ey, hx - 9, ey - 0.5, gc, 1.3);
     }
   }
-  if (ch.beard) {                                // barbe arrondie avec pattes
-    ctx.beginPath(); ctx.moveTo(hx - 9.8, hy + 0.5); ctx.quadraticCurveTo(hx - 11, hy + 12.5, hx, hy + 12.8); ctx.quadraticCurveTo(hx + 11, hy + 12.5, hx + 9.8, hy + 3.8);
-    ctx.quadraticCurveTo(hx + 6, hy + 5.6, hx + 2.5, hy + 4.6); ctx.quadraticCurveTo(hx - 4, hy + 5.2, hx - 9.8, hy + 0.5); ctx.closePath(); ctx.fillStyle = hc; ctx.fill();
-    ctx.strokeStyle = shade(hc, 0.25); ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(hx - 5, hy + 9); ctx.quadraticCurveTo(hx, hy + 11, hx + 5, hy + 9.2); ctx.stroke();
+  if (ch.beard) {                                // barbe : pattes + mâchoire + menton, le visage (joues, bouche) reste visible
+    const bcol = ch.beardColor || (hc === skin ? '#5a4636' : hc);
+    ctx.beginPath(); ctx.moveTo(hx + 9.9, hy + 4.6); ctx.bezierCurveTo(hx + 9.6, hy + 13.2, hx - 5, hy + 14.2, hx - 10.3, hy + 3.2);
+    ctx.lineTo(hx - 8, hy + 2.4); ctx.quadraticCurveTo(hx - 5.5, hy + 7.8, hx + 0.8, hy + 8.7); ctx.quadraticCurveTo(hx + 6.6, hy + 9.8, hx + 8.5, hy + 7); ctx.closePath(); ctx.fillStyle = bcol; ctx.fill();
+    ctx.strokeStyle = shade(bcol, 0.28); ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(hx - 4, hy + 10.4); ctx.quadraticCurveTo(hx + 1, hy + 12, hx + 6, hy + 10.4); ctx.moveTo(hx - 8, hy + 5.6); ctx.quadraticCurveTo(hx - 6.5, hy + 8, hx - 3.5, hy + 9.4); ctx.stroke();
+    rr(ctx, hx + 2.8, hy + 4.2, 6.6, 2, 1, bcol);        // moustache
   }
   if (ch.mustache) rr(ctx, hx + 2.5, hy + 4.8, 8, 2.8, 1.3, hc);
-  const mx = hx + 6.6, my = hy + 6.2;
+  const mx = hx + 6.6, my = hy + (ch.beard ? 6.9 : 6.2);
   if (a.talking) ell(ctx, mx, my + 1.2, 2.3, 1.2 + Math.abs(Math.sin(t * 14)) * 1.9, '#7a2b2b');
   else if (mood === 'laugh') { ctx.beginPath(); ctx.arc(mx, my - 0.6, 3.1, 0, Math.PI); ctx.closePath(); ctx.fillStyle = '#7a2b2b'; ctx.fill(); ell(ctx, mx, my + 1.7, 1.7, 0.9, '#e8707a'); }
   else if (mood === 'surprised') ell(ctx, mx, my + 1, 1.8, 2.4, '#7a2b2b');
-  else if (!ch.beard || mood === 'angry' || mood === 'sad') {
+  else {
     ctx.strokeStyle = ch.lips || '#8a4040'; ctx.lineWidth = ch.lips ? 1.5 : 1.2; ctx.beginPath();
     if (mood === 'angry') { ctx.moveTo(mx - 2, my + 1.4); ctx.lineTo(mx + 2.2, my + 0.6); }
     else if (mood === 'sad') ctx.arc(mx, my + 2.6, 2.4, Math.PI + 0.3, 6.2832 - 0.3);
