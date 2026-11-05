@@ -469,6 +469,7 @@ class LevelScene {
       if (c === '#') drawTile(ctx, this.theme, '#', tx * TILE, ty * TILE, this.tile(tx, ty - 1) !== '#', tx, ty);
       else if (c === '=') drawTile(ctx, this.theme, '=', tx * TILE, ty * TILE, true, tx, ty);
     }
+    for (const d of this.def.decor || []) drawProp(ctx, d, this.t);                    // décor posé dans le niveau (def.decor = [{kind, x, y}])
     for (const s of this.springs) drawSpring(ctx, s.x, s.y, s.anim);
     for (const c of this.checks) drawCoffeeMachine(ctx, c.x, c.y, c.on, this.t);
     if (this.exit) drawDoor(ctx, this.exit.x, this.exit.y, this.exit.open, this.t, this.def.exitLabel);
