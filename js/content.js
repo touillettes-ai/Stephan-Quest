@@ -473,6 +473,21 @@ CUTS.j14_bureau = {
     yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !', { mood: 'laugh' });
     c.mood('chef', undefined);
     c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
+    // juste avant la fin : Sheryna passe au-dessus d'eux sur un grand avion en papier
+    const SH = Object.assign({}, CHARS.sheryna, { scale: 0.7 });
+    const big = c.prop('avion', 1200, 150, { dir: -1, s: 5.2 });
+    const sh = c.add('sheryna', SH, 1200, { y: 150, face: -1, state: 'sit', z: 4 }); sh.rideOn = big; sh.rideDx = 6; sh.rideDy = -7;
+    c.sfx('jump'); sh.waving = true;
+    yield flight(big, 560, 150, 2.4, 0);
+    big.hover = 4;
+    yield c.say('sheryna', "Coucou, vous êtes trop Mim's vu d'en haut !", { mood: 'laugh' });
+    c.actors.coline.waving = true; c.face('coline', 1);
+    yield c.say('coline', "Coucou Sheryna ! N'oublie pas l'accompagnement des Frontaux dans 5 minutes.");
+    c.actors.coline.waving = false;
+    yield c.say('sheryna', 'Avec Air Sheryna, aucun retard !', { mood: 'laugh' });
+    big.hover = 0; sh.waving = false; c.sfx('win'); c.burst(big.x + 60, big.y, 16, ['#fff', '#d9e2ee'], 220); big.rot = -0.12;
+    yield flight(big, -420, 110, 0.7, 0);
+    c.remove('sheryna'); c.unprop(big);
     yield c.say(null, 'Mission du jour : retrouver tous les morceaux du logigramme.');
   },
 };

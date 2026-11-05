@@ -214,6 +214,7 @@ class CutScene {
     for (const k in this.actors) { const a = this.actors[k]; a.t += dt; if (a.emoteT > 0) { a.emoteT -= dt; if (a.emoteT <= 0) a.emote = null; } }
     if (this.shake > 0) this.shake -= dt;
     updateParticles(this.parts, dt);
+    for (const k in this.actors) { const a = this.actors[k]; if (a.rideOn) { a.x = a.rideOn.x + (a.rideDx || 0); a.y = a.rideOn.y + (a.rideDy || 0) + (a.rideOn.hover ? Math.sin(this.t * 3) * a.rideOn.hover : 0); } }          // a.rideOn = un accessoire qui porte le personnage (ex. un avion en papier)
     if (this.follow) this.cam = lerp(this.cam, clamp(this.follow.x - W / 2, 0, Math.max(0, this.worldW - W)), Math.min(1, dt * 3));
     if (this.waiter && this.waiter.update(dt)) { this.waiter = null; this.advance(); }
   }
@@ -227,7 +228,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot, waving: a.waving });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);

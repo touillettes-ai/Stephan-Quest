@@ -286,7 +286,7 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'fall':  lL = 0.25; lR = -0.25; aL = -1.5; aR = 1.5; break;
     case 'wave':  aR = 2.7 + Math.sin(t * 10) * 0.35; break;
     case 'cheer': aL = -2.7; aR = 2.7; bob = -Math.abs(Math.sin(t * 7)) * 5; lL = 0.12; lR = -0.12; break;
-    case 'sit':   sit = true; low = 10; aR = 1.05; aL = 0.9; bob = Math.sin(t * 1.6) * 0.5; break;
+    case 'sit':   sit = true; low = 10; aR = a.waving ? 2.7 + Math.sin(t * 10) * 0.35 : 1.05; aL = 0.9; bob = Math.sin(t * 1.6) * 0.5; break;
     case 'hurt':  aL = -2.2; aR = 2.2; lL = 0.4; lR = -0.4; break;
   }
   const skin = ch.skin || '#f0c8a0', top = ch.top || '#2f6db5', bot = ch.bottom || '#2c3440', shoe = ch.shoe || '#1b1b1b';
@@ -792,7 +792,7 @@ function drawProp(ctx, p, t) {
       for (let i = 0; i < 9; i++) { const an = i / 9 * 6.2832 + 0.2; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r * 0.8, y + Math.sin(an) * r * 0.8); ctx.lineTo(x + Math.cos(an) * (r + 26 + hash(i) * 22), y + Math.sin(an) * (r + 26 + hash(i) * 22)); ctx.stroke(); }
       break; }
     case 'avion':                                 // avion en papier (x,y = centre ; p.dir = 1 vers la droite / -1 vers la gauche ; p.rot = inclinaison)
-      ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1.6); if (p.dir === -1) ctx.scale(-1, 1); ctx.rotate(p.rot || 0);
+      ctx.save(); ctx.translate(x, y + (p.hover ? Math.sin(t * 3) * p.hover : 0)); ctx.scale(p.s || 1.6, p.s || 1.6); if (p.dir === -1) ctx.scale(-1, 1); ctx.rotate(p.rot || 0);
       poly(ctx, [[-14, -3], [16, 0], [-14, 6]], '#fdfdfd'); poly(ctx, [[-14, -3], [16, 0], [-3, 1.5]], '#d9e2ee'); poly(ctx, [[-14, 6], [16, 0], [-3, 1.5]], '#eef2f8');
       ctx.strokeStyle = '#8fa0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-14, -3); ctx.lineTo(16, 0); ctx.lineTo(-14, 6); ctx.closePath(); ctx.moveTo(-3, 1.5); ctx.lineTo(16, 0); ctx.stroke(); ctx.restore(); break;
     case 'eclats':                                // éclats de verre posés au sol (x = centre, y = sol)
@@ -1319,6 +1319,7 @@ class CutScene {
     for (const k in this.actors) { const a = this.actors[k]; a.t += dt; if (a.emoteT > 0) { a.emoteT -= dt; if (a.emoteT <= 0) a.emote = null; } }
     if (this.shake > 0) this.shake -= dt;
     updateParticles(this.parts, dt);
+    for (const k in this.actors) { const a = this.actors[k]; if (a.rideOn) { a.x = a.rideOn.x + (a.rideDx || 0); a.y = a.rideOn.y + (a.rideDy || 0) + (a.rideOn.hover ? Math.sin(this.t * 3) * a.rideOn.hover : 0); } }          // a.rideOn = un accessoire qui porte le personnage (ex. un avion en papier)
     if (this.follow) this.cam = lerp(this.cam, clamp(this.follow.x - W / 2, 0, Math.max(0, this.worldW - W)), Math.min(1, dt * 3));
     if (this.waiter && this.waiter.update(dt)) { this.waiter = null; this.advance(); }
   }
@@ -1332,7 +1333,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot, waving: a.waving });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);
@@ -3130,6 +3131,21 @@ CUTS.j14_bureau = {
     yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !', { mood: 'laugh' });
     c.mood('chef', undefined);
     c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
+    // juste avant la fin : Sheryna passe au-dessus d'eux sur un grand avion en papier
+    const SH = Object.assign({}, CHARS.sheryna, { scale: 0.7 });
+    const big = c.prop('avion', 1200, 150, { dir: -1, s: 5.2 });
+    const sh = c.add('sheryna', SH, 1200, { y: 150, face: -1, state: 'sit', z: 4 }); sh.rideOn = big; sh.rideDx = 6; sh.rideDy = -7;
+    c.sfx('jump'); sh.waving = true;
+    yield flight(big, 560, 150, 2.4, 0);
+    big.hover = 4;
+    yield c.say('sheryna', "Coucou, vous êtes trop Mim's vu d'en haut !", { mood: 'laugh' });
+    c.actors.coline.waving = true; c.face('coline', 1);
+    yield c.say('coline', "Coucou Sheryna ! N'oublie pas l'accompagnement des Frontaux dans 5 minutes.");
+    c.actors.coline.waving = false;
+    yield c.say('sheryna', 'Avec Air Sheryna, aucun retard !', { mood: 'laugh' });
+    big.hover = 0; sh.waving = false; c.sfx('win'); c.burst(big.x + 60, big.y, 16, ['#fff', '#d9e2ee'], 220); big.rot = -0.12;
+    yield flight(big, -420, 110, 0.7, 0);
+    c.remove('sheryna'); c.unprop(big);
     yield c.say(null, 'Mission du jour : retrouver tous les morceaux du logigramme.');
   },
 };
