@@ -951,6 +951,28 @@ BG.reunion = (ctx, cx, t) => {
   rr(ctx, 790, 70, 130, 36, 6, '#1d222c'); txt(ctx, 'SALLE MOZART', 855, 94, 14, '#ffe08a', 'center'); txt(ctx, '♪', 70, 44, 26, 'rgba(255,255,255,.35)', 'center');
   rect(ctx, 0, FLOOR_Y - 150, W, 6, 'rgba(0,0,0,.15)');
 };
+/* Salle Mozart (fin du niveau « La crise ») : les deux écrans montrent des graphiques en alerte rouge ;
+   CRISIS.calm (0..1, réglé par la cinématique) fait descendre les barres et les fait passer au vert */
+const CRISIS = { calm: 0 };
+BG.mozart = (ctx, cx, t) => {
+  const k = clamp(CRISIS.calm, 0, 1), mix = (a, b) => Math.round(a + (b - a) * k);
+  const bar = 'rgb(' + mix(224, 76) + ',' + mix(60, 194) + ',' + mix(52, 106) + ')', edge = 'rgb(' + mix(255, 140) + ',' + mix(110, 255) + ',' + mix(100, 170) + ')';
+  vgrad(ctx, 0, H, '#707f9c', '#454f68');
+  [[0, 'INCIDENTS'], [2, 'VULNÉRABILITÉS']].forEach(([n, label]) => {
+    const wx = 30 + n * 310; rr(ctx, wx, 60, 240, 190, 8, '#161d2e', '#e6edf5', 6);
+    ctx.globalAlpha = 0.18 + 0.1 * (1 - k) * Math.abs(Math.sin(t * 4)); rr(ctx, wx + 6, 66, 228, 178, 4, edge); ctx.globalAlpha = 1;   // le fond de l'écran clignote tant que c'est rouge
+    for (let g = 0; g < 4; g++) rect(ctx, wx + 10, 110 + g * 34, 220, 1, 'rgba(255,255,255,.12)');
+    txt(ctx, label, wx + 14, 86, 13, edge);
+    for (let b = 0; b < 6; b++) {
+      const base = 70 + hash(n * 9 + b) * 70, h = base * (1 - 0.82 * k) + 8 + Math.sin(t * 6 + b + n) * 3 * (1 - k), bx = wx + 14 + b * 36;
+      rect(ctx, bx, 244 - h, 28, h, bar); rect(ctx, bx, 244 - h, 28, 3, edge);
+    }
+  });
+  rr(ctx, 330, 54, 300, 180, 6, '#f6f8fb', '#2a2f3a', 5); txt(ctx, 'CELLULE DE CRISE', 480, 98, 22, '#c0392b', 'center'); for (let i = 0; i < 4; i++) { rr(ctx, 360, 118 + i * 24, 120 + hash(i) * 120, 10, 4, '#aab4c4'); }
+  rr(ctx, 790, 70, 130, 36, 6, '#1d222c'); txt(ctx, 'SALLE MOZART', 855, 94, 14, '#ffe08a', 'center'); txt(ctx, '♪', 70, 44, 26, 'rgba(255,255,255,.35)', 'center');
+  rect(ctx, 0, FLOOR_Y - 150, W, 6, 'rgba(0,0,0,.15)');
+};
+THEMES.mozart = THEMES.reunion;
 BG.train = (ctx, cx, t) => {
   vgrad(ctx, 0, H, '#dfe3e9', '#c3cad4');
   const sc = t * 150 + cx * 0.3;
@@ -1020,7 +1042,7 @@ BG.bar = (ctx, cx, t) => {
     for (let k = 0; k < 9; k++) { rr(ctx, x + 52 + k * 31, 250, 12, 40, 4, cols[k % 5]); rect(ctx, x + 56 + k * 31, 238, 4, 14, cols[k % 5]); rr(ctx, x + 50 + k * 31, 180, 12, 40, 4, cols[(k + 2) % 5]); rect(ctx, x + 54 + k * 31, 168, 4, 14, cols[(k + 2) % 5]); } });
   par(cx, 0.7, 520, (x) => { drawProp(ctx, { kind: 'counter', x: x + 130, y: FLOOR_Y - 4 }, t); for (const dx of [0, 200]) drawProp(ctx, { kind: 'stool', x: x + 270 + dx, y: FLOOR_Y - 4 }, t); });
 };
-const MOTE_COLOR = { circuit: '#9affd8', crise: '#ff9a9a', bar: '#ffb8f0', pi: '#ffe9a8', reunion: '#e8eefc', japonais: '#fff2c4', charlies: '#ffe6b0', gastro: '#ffe9a8' };
+const MOTE_COLOR = { circuit: '#9affd8', crise: '#ff9a9a', bar: '#ffb8f0', pi: '#ffe9a8', reunion: '#e8eefc', mozart: '#e8eefc', japonais: '#fff2c4', charlies: '#ffe6b0', gastro: '#ffe9a8' };
 function drawMotes(ctx, cx, t, name) {                           // petites poussières de lumière qui flottent
   ctx.fillStyle = MOTE_COLOR[name] || '#ffffff';
   for (let i = 0; i < 24; i++) {
@@ -3056,8 +3078,9 @@ CUTS.j7_crise = {
 };
 
 CUTS.j7_mozart = {
-  type: 'cutscene', bg: 'reunion', theme: 'reunion',
+  type: 'cutscene', bg: 'mozart', theme: 'mozart',
   script: function* (c) {
+    CRISIS.calm = 0;                                   // graphiques en alerte rouge au début…
     const left = [['boss1', 250], ['boss2', 330], ['boss3', 410]], right = [['boss4', 550], ['boss5', 630], ['boss6', 710]];
     for (const [k, x] of left) seat(c, k, CHARS[k], x, 1, false);
     for (const [k, x] of right) seat(c, k, CHARS[k], x, -1, false);
@@ -3069,7 +3092,7 @@ CUTS.j7_mozart = {
     c.emote('hero', '?', 1.6);
     yield c.say('hero', 'Bastien ?! Mais qu\'est-ce que tu fais debout sur la table ?');
     yield c.say(null, 'Bastien danse pour résoudre la crise.');
-    for (let i = 0; i < 12; i++) { c.face('bastien', i % 2 ? 1 : -1); c.sfx('coin'); yield c.wait(0.34); }
+    for (let i = 0; i < 12; i++) { c.face('bastien', i % 2 ? 1 : -1); c.sfx('coin'); for (let q = 1; q <= 4; q++) { CRISIS.calm = (i + q / 4) / 12; yield c.wait(0.085); } }      // …plus Bastien danse, plus les barres descendent et passent au vert
     for (const [k] of left.concat(right)) { c.pose(k, 'idle'); }
     yield c.say('boss1', 'Merci, c\'est tout bon ! On repart travailler.', { name: 'Les chefs' });
     yield [c.walk('boss1', -80, 190), c.walk('boss2', -80, 190), c.walk('boss3', -80, 190), c.walk('boss4', 1040, 190), c.walk('boss5', 1040, 190), c.walk('boss6', 1040, 190)];

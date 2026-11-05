@@ -473,8 +473,9 @@ CUTS.j7_crise = {
 };
 
 CUTS.j7_mozart = {
-  type: 'cutscene', bg: 'reunion', theme: 'reunion',
+  type: 'cutscene', bg: 'mozart', theme: 'mozart',
   script: function* (c) {
+    CRISIS.calm = 0;                                   // graphiques en alerte rouge au début…
     const left = [['boss1', 250], ['boss2', 330], ['boss3', 410]], right = [['boss4', 550], ['boss5', 630], ['boss6', 710]];
     for (const [k, x] of left) seat(c, k, CHARS[k], x, 1, false);
     for (const [k, x] of right) seat(c, k, CHARS[k], x, -1, false);
@@ -486,7 +487,7 @@ CUTS.j7_mozart = {
     c.emote('hero', '?', 1.6);
     yield c.say('hero', 'Bastien ?! Mais qu\'est-ce que tu fais debout sur la table ?');
     yield c.say(null, 'Bastien danse pour résoudre la crise.');
-    for (let i = 0; i < 12; i++) { c.face('bastien', i % 2 ? 1 : -1); c.sfx('coin'); yield c.wait(0.34); }
+    for (let i = 0; i < 12; i++) { c.face('bastien', i % 2 ? 1 : -1); c.sfx('coin'); for (let q = 1; q <= 4; q++) { CRISIS.calm = (i + q / 4) / 12; yield c.wait(0.085); } }      // …plus Bastien danse, plus les barres descendent et passent au vert
     for (const [k] of left.concat(right)) { c.pose(k, 'idle'); }
     yield c.say('boss1', 'Merci, c\'est tout bon ! On repart travailler.', { name: 'Les chefs' });
     yield [c.walk('boss1', -80, 190), c.walk('boss2', -80, 190), c.walk('boss3', -80, 190), c.walk('boss4', 1040, 190), c.walk('boss5', 1040, 190), c.walk('boss6', 1040, 190)];
