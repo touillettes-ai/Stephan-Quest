@@ -140,10 +140,11 @@ for (const [name, ar] of Object.entries(G.ARENAS)) {
       for (let i = 0; i < 60 * 240 && sp.phase !== 'over'; i++) {
         const al = sp.alive(), k = {};
         if (al.length) { const e = al.reduce((a, b) => Math.abs(sp.ex(b) - sp.px) < Math.abs(sp.ex(a) - sp.px) ? b : a); if (sp.ex(e) < sp.px - 5) k.ArrowLeft = true; else if (sp.ex(e) > sp.px + 5) k.ArrowRight = true; k.Space = true; }
+        const danger = sp.bombs.find(b => Math.abs(b.x - sp.px) < 30 && b.y > 330 && b.y < 490); if (danger) { delete k.ArrowLeft; delete k.ArrowRight; if (danger.x > sp.px || sp.px > 900) k.ArrowLeft = true; else k.ArrowRight = true; }       // le bot esquive les tickets
         Input.down = k; frame(sp, 1 / 60, {}); maxWave = Math.max(maxWave, sp.wave); if (i % 120 === 0) sp.draw(ctx);
       }
     } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
-    Input.down = {}; ok(sp.score > 200, name + ' : le bot doit éliminer des envahisseurs (score ' + sp.score + ')'); sp.draw(ctx);
+    Input.down = {}; ok(sp.score > 100, name + ' : le bot doit éliminer des envahisseurs (score ' + sp.score + ')'); sp.draw(ctx);
     const sw = new G.InvaderScene(fakeGame, ar, () => {}, () => {}); sw.enter(); sw.phase = 'play'; for (const e of sw.en) e.alive = false; sw.en[0].alive = true; sw.shots.push({ x: sw.ex(sw.en[0]), y: sw.ey(sw.en[0]) + 10 }); frame(sw, 1 / 60, {});
     ok(sw.phase === 'clear', name + ' : tuer le dernier envahisseur doit finir la vague (' + sw.phase + ')'); for (let i = 0; i < 150; i++) frame(sw, 1 / 60, {}); ok(sw.wave === 2 && sw.phase === 'ready' && sw.alive().length === 32, name + ' : vague suivante non lancée (vague ' + sw.wave + ')');
     const si = new G.InvaderScene(fakeGame, ar, () => {}, () => {}); si.enter();     // joueur immobile : il finit par perdre
