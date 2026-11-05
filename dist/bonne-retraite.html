@@ -3005,7 +3005,9 @@ CUTS.j15_train_bastien = {
     c.pose('olivier', 'jump'); c.pose('bastien', 'jump'); c.mood('bastien', 'laugh'); c.mood('olivier', 'laugh');
     yield c.say('olivier', "VERS L'INFINI ET AU DELIVERY !", { name: 'Olivier et Bastien', mood: 'laugh' });
     c.sfx('jump');
-    yield [arc('olivier', 1160, -190, 1.7, 40, -1.05), arc('bastien', 1230, -230, 1.7, 40, -1.05)];
+    yield [arc('olivier', 850, 175, 1.0, 30, -0.7), arc('bastien', 862, 195, 1.0, 30, -0.7)];          // ils filent droit sur la fenêtre de droite…
+    c.sfx('hurt'); c.sfx('stomp'); c.shake(0.6); c.prop('vitrecassee', 850, 170); c.burst(850, 170, 60, GLASS, 460);   // …et la brisent
+    yield [arc('olivier', 1160, -150, 0.7, 0, -1.05), arc('bastien', 1190, -130, 0.7, 0, -1.05)];
     c.remove('olivier'); c.remove('bastien');
     c.pose('hero', 'idle'); c.face('hero', 1); c.emote('hero', '…', 1.6);
     yield c.wait(1.6);
