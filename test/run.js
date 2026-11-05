@@ -8,7 +8,7 @@ function mockCtx() {
   return new Proxy(target, { get(t, k) { return k in t ? t[k] : () => {}; }, set(t, k, v) { t[k] = v; return true; } });
 }
 const G = new Function('window', 'document', 'requestAnimationFrame', src + `
-  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, AuraScene, BunnyScene, PongScene, PacScene, MiniGameSelect, MINIGAMES, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
+  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, AuraScene, BunnyScene, PongScene, PacScene, InvaderScene, MiniGameSelect, MINIGAMES, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
 )({ addEventListener() {} }, {}, () => {});
 const { Input } = G;
 let failures = 0;
@@ -132,6 +132,26 @@ for (const [name, ar] of Object.entries(G.ARENAS)) {
     for (let i = 0; i < 100; i++) frame(so, 1 / 60, i === 90 ? { Space: true } : {}); ok(so.phase === 'over' && so.winner === 0 && fin, name + ' : 7e point / retour au menu'); so.draw(ctx);
     ok(sn.touchMode === 'menu' && new G.PongScene(fakeGame, ar, () => {}, () => {}).touchMode === 'updown', name + ' : modes tactiles');
     console.log('  ' + name.padEnd(12) + '✓ ' + wins + '/3 victoires du bot de suivi, immobile → perdu ' + sn.score.join('-'));
+    continue;
+  }
+  if (ar.type === 'invader') {
+    const ctx = mockCtx(), sp = new G.InvaderScene(fakeGame, ar, () => {}, () => {}); sp.enter(); let maxWave = 1;
+    try {                                                                          // un bot qui se place sous l'envahisseur le plus proche et tire sans arrêt
+      for (let i = 0; i < 60 * 240 && sp.phase !== 'over'; i++) {
+        const al = sp.alive(), k = {};
+        if (al.length) { const e = al.reduce((a, b) => Math.abs(sp.ex(b) - sp.px) < Math.abs(sp.ex(a) - sp.px) ? b : a); if (sp.ex(e) < sp.px - 5) k.ArrowLeft = true; else if (sp.ex(e) > sp.px + 5) k.ArrowRight = true; k.Space = true; }
+        Input.down = k; frame(sp, 1 / 60, {}); maxWave = Math.max(maxWave, sp.wave); if (i % 120 === 0) sp.draw(ctx);
+      }
+    } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+    Input.down = {}; ok(sp.score > 200, name + ' : le bot doit éliminer des envahisseurs (score ' + sp.score + ')'); sp.draw(ctx);
+    const sw = new G.InvaderScene(fakeGame, ar, () => {}, () => {}); sw.enter(); sw.phase = 'play'; for (const e of sw.en) e.alive = false; sw.en[0].alive = true; sw.shots.push({ x: sw.ex(sw.en[0]), y: sw.ey(sw.en[0]) + 10 }); frame(sw, 1 / 60, {});
+    ok(sw.phase === 'clear', name + ' : tuer le dernier envahisseur doit finir la vague (' + sw.phase + ')'); for (let i = 0; i < 150; i++) frame(sw, 1 / 60, {}); ok(sw.wave === 2 && sw.phase === 'ready' && sw.alive().length === 32, name + ' : vague suivante non lancée (vague ' + sw.wave + ')');
+    const si = new G.InvaderScene(fakeGame, ar, () => {}, () => {}); si.enter();     // joueur immobile : il finit par perdre
+    try { for (let i = 0; i < 60 * 400 && si.phase !== 'over'; i++) frame(si, 1 / 60, {}); } catch (e) { ok(false, name + ' : exception (immobile) → ' + e.message); }
+    ok(si.phase === 'over', name + ' : un joueur immobile doit perdre (' + si.phase + ')'); si.draw(ctx);
+    let fin = false; const so = new G.InvaderScene(fakeGame, ar, () => { fin = true; }, () => {}); so.enter(); so.phase = 'over'; so.pt = 0; for (let i = 0; i < 100; i++) frame(so, 1 / 60, i === 90 ? { Space: true } : {}); ok(fin, name + ' : retour au menu');
+    ok(si.touchMode === 'menu' && so.touchMode === 'menu' && new G.InvaderScene(fakeGame, ar, () => {}, () => {}).touchMode === 'invader', name + ' : modes tactiles');
+    console.log('  ' + name.padEnd(12) + '✓ bot : score ' + sp.score + ', vague ' + maxWave + ' · immobile : fin en vague ' + si.wave);
     continue;
   }
   if (ar.type === 'pac') {
@@ -264,7 +284,7 @@ console.log('Mini-jeux');
   ok(G.MINIGAMES.length >= 1 && G.MINIGAMES.every(m => m.def && (!m.def.song || G.MUSIC[m.def.song])), 'MINIGAMES : musique introuvable');
   const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 254 + 100 }; ti.update(1 / 60); Input.tap = null;
   ok(g.last instanceof G.MiniGameSelect, 'Titre : le bouton « Mini-jeux » n\'ouvre pas le menu');
-  const mg = new G.MiniGameSelect(g); mg.enter(); g.last = null; Input.tap = { x: 300, y: 150 }; mg.update(1 / 60); Input.tap = null; ok(g.last instanceof G.DanceScene, 'Mini-jeux : le tap sur le mini-jeu sélectionné ne lance pas la danse');
+  const mg = new G.MiniGameSelect(g); mg.enter(); g.last = null; Input.tap = { x: 300, y: 115 }; mg.update(1 / 60); Input.tap = null; ok(g.last instanceof G.DanceScene, 'Mini-jeux : le tap sur le mini-jeu sélectionné ne lance pas la danse');
   g.last.enter(); ok(g.last.touchMode === 'dancefree' && g.last.song.length > 200, 'Danse (mini-jeu) : chanson entière attendue');
   console.log('  ✓ menu, taps, chanson entière (' + g.last.arrows.length + ' flèches, ' + Math.round(g.last.song.length) + ' s)');
 }

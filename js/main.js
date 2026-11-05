@@ -7,6 +7,7 @@ const TOUCH_LAYOUTS = {
   broom: { left: [['◀', 'ArrowLeft'], ['▶', 'ArrowRight']], right: [['BALAI', 'KeyE', 'act big'], ['⤒', 'Space']], top: [['⏸', 'Escape', 'pill']] },
   updown: { left: [['▲', 'ArrowUp', 'big'], ['▼', 'ArrowDown', 'big']], top: [['Quitter', 'Escape', 'pill']] },
   pacman: { left: [['◀', 'ArrowLeft'], ['▶', 'ArrowRight']], right: [['▲', 'ArrowUp', 'big'], ['▼', 'ArrowDown', 'big']], top: [['Quitter', 'Escape', 'pill']] },
+  invader: { left: [['◀', 'ArrowLeft'], ['▶', 'ArrowRight']], right: [['TIR', 'Space', 'act big']], top: [['Quitter', 'Escape', 'pill']] },
   one:   { right: [['FRAPPE', 'Space', 'act big']], top: [['Quitter', 'Escape', 'pill']] },
   dancefree: { row: [['◀', 'ArrowLeft', 'sq'], ['▼', 'ArrowDown', 'sq'], ['▲', 'ArrowUp', 'sq'], ['▶', 'ArrowRight', 'sq']], top: [['Quitter', 'Escape', 'pill']] },
   dance: { row: [['◀', 'ArrowLeft', 'sq'], ['▼', 'ArrowDown', 'sq'], ['▲', 'ArrowUp', 'sq'], ['▶', 'ArrowRight', 'sq']] },

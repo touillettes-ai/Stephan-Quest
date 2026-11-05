@@ -296,12 +296,14 @@ ARENAS.aura = { type: 'aura', mode: 'cpu', songs: ['dre', 'gangsta'], title: 'Ba
 ARENAS.lapin = { type: 'bunny', title: 'Lapin Sport', objective: 'Envoie Matthieu le plus loin possible' };
 ARENAS.pong = { type: 'pong', title: 'Pong Deve', objective: 'Premier à 7 points contre l\'ordinateur' };
 ARENAS.pac = { type: 'pac', title: 'Stephan Man', objective: 'Mange tous les points' };
+ARENAS.invader = { type: 'invader', title: 'Deve Invader', objective: 'Repousse les collègues envahisseurs' };
 const MINIGAMES = [
   { id: 'danse', title: 'Danse', desc: 'Toute la chanson (3 min 58) · bonus toutes les 10 flèches', best: 'dance.full', def: ARENAS.danseFull },
   { id: 'aura', title: 'Battle d\'aura', desc: 'Stephan contre Arno (ordinateur) · sur Dr. Dre et Coolio · 3 manches', best: 'aura.cpu', bestLabel: 'Victoires', icon: 'duel', def: ARENAS.aura },
   { id: 'lapin', title: 'Lapin Sport', desc: 'Envoie Matthieu le plus loin avec ta batte · 3 lancers', best: 'lapin.best', bestUnit: ' m', icon: 'bunny', def: ARENAS.lapin },
   { id: 'pong', title: 'Pong Deve', desc: 'Le Pong d\'origine, mais la balle est la tête de Stephan · premier à 7', best: 'pong.wins', bestLabel: 'Victoires', icon: 'pong', def: ARENAS.pong },
   { id: 'pac', title: 'Stephan Man', desc: 'Mange tous les points, évite les collègues fantômes · 3 vies', best: 'stephanman.best', icon: 'pac', def: ARENAS.pac },
+  { id: 'invader', title: 'Deve Invader', desc: 'Space Invaders : tire sur les têtes des collègues · 3 vies, vagues sans fin', best: 'invader.best', icon: 'invader', def: ARENAS.invader },
 ];
 
 function* juggle(c, ball, n) { for (let i = 0; i < n; i++) for (let k = 0; k <= 10; k++) { ball.y = FLOOR_Y - 70 - Math.sin(k / 10 * Math.PI) * 50; yield c.wait(0.045); } }

@@ -30,6 +30,10 @@ else if (kind === 'pac') {
   sc = new PacScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
   const T = +param || 6; const seq = [{ ArrowLeft: true }, { ArrowUp: true }, { ArrowRight: true }, { ArrowDown: true }]; for (let i = 0; i < T * 30; i++) { Input.down = seq[Math.floor(i / 45) % 4]; step(1 / 30, {}); } Input.down = {};
 }
+else if (kind === 'invader') {
+  sc = new InvaderScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 8; for (let i = 0; i < T * 30; i++) { const al = sc.alive(), k = {}; if (al.length) { const e = al.reduce((a, b) => Math.abs(sc.ex(b) - sc.px) < Math.abs(sc.ex(a) - sc.px) ? b : a); if (e && sc.ex(e) < sc.px - 6) k.ArrowLeft = true; else if (e && sc.ex(e) > sc.px + 6) k.ArrowRight = true; k.Space = true; } Input.down = k; step(1 / 30, {}); } Input.down = {};
+}
 else if (kind === 'aura') {
   sc = new AuraScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
   const T = +param || 12; for (let i = 0; i < T * 30; i++) { const keys = {}; if (sc.phase === 'turn' && (sc.turn === 0 || !sc.cpu)) for (const a of sc.arrows) if (a.state === 0 && Math.abs(a.t - sc.songTime()) < 1 / 60) keys[['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'][a.lane]] = true; step(1 / 30, keys); }

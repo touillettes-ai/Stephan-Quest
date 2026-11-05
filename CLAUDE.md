@@ -84,6 +84,8 @@ Physique (`PHYS` dans engine.js) : vitesse 230, saut 640, gravité 1800, ressort
 **Pong Deve** (`PongScene`, `type:'pong'`) : Pong d'origine (fond noir, raquettes blanches) contre l'ordinateur, la balle est la tête de Stephan (`drawHead` dans draw.js = tête seule d'un personnage), premier à 7, victoires gardées (`pong.wins`). Réglages dans `PONG`. Test visuel `test/shot.html#pong/pong/6`.
 **Stephan Man** (`PacScene`, `type:'pac'`) : Pac-Man dans un labyrinthe symétrique 21×19 (`PAC_HALF`, tunnel à gauche/droite), Stephan = sa tête qui croque, les fantômes = Chef, Bastien, Olivier, Arno sous un drap ; gros points = fantômes effrayés et mangeables ; 3 vies, niveaux de plus en plus rapides, record `stephanman.best`. Réglages dans `PAC`. Test visuel `test/shot.html#pac/pac/7` ; menu `#minis/3`.
 
+**Deve Invader** (`InvaderScene`, `type:'invader'`) : Space Invaders, canon = tête de Stephan, envahisseurs = têtes des collègues (`INV_KEYS`), tickets en guise de bombes, 4 boucliers destructibles, soucoupe bonus = Matthieu-lapin, 3 vies, vagues de plus en plus rapides, record `invader.best`. Réglages `INV`. Test visuel `test/shot.html#invader/invader/7`.
+
 ## Créer une cinématique
 Dans `CUTS`, un script générateur ; `c` = API :
 ```js

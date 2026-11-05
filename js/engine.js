@@ -1312,11 +1312,131 @@ class PacScene {
 }
 
 /* ============================================================
+   InvaderScene : « Deve Invader » — un Space Invaders. Le canon est la tête de Stephan,
+   les envahisseurs sont les têtes des collègues. Boucliers, soucoupe bonus (Matthieu-lapin), vagues de plus en plus rapides.
+   ============================================================ */
+const INV = { cols: 8, rows: 4, dx: 62, dy: 46, size: 36, left: 40, right: W - 40, top: 96, playerY: 496, speed: 6.5, shotCd: 0.38, lives: 3, bunkerY: 398 };
+const INV_KEYS = ['coline', 'amelie', 'sheryna', 'cecile', 'franck', 'danila', 'hakim', 'matthieu', 'arno', 'justine', 'sandie', 'bastien', 'olivier', 'imen', 'youssef', 'chef'];
+class InvaderScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.phase === 'over' ? 'menu' : 'invader'; }
+  enter() { this.t = 0; this.score = 0; this.lives = INV.lives; this.wave = 1; this.parts = []; this.pops = []; this.best0 = Best.get('invader.best'); this.newRecord = false; this.startWave(); }
+  startWave() {
+    this.en = []; const lo = Math.min(3, this.wave - 1) * 14;
+    for (let r = 0; r < INV.rows; r++) for (let c = 0; c < INV.cols; c++) this.en.push({ r, c, key: INV_KEYS[(r * INV.cols + c + (this.wave - 1) * 3) % INV_KEYS.length], alive: true, hit: 0 });
+    this.fx = INV.left + 20; this.fy = INV.top + lo; this.dir = 1; this.px = W / 2; this.shots = []; this.bombs = []; this.cool = 0; this.bombT = 1.5; this.inv = 0; this.ufo = null; this.ufoT = rnd(8, 14); this.flash = 0; this.kick = 0;
+    this.bunkers = []; for (let b = 0; b < 4; b++) { const bx = 120 + b * 240 - 28; for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) { if (r === 3 && c > 1 && c < 5) continue; this.bunkers.push({ x: bx + c * 8, y: INV.bunkerY + r * 8, hp: 2 }); } }
+    this.phase = 'ready'; this.pt = 1.8;
+  }
+  alive() { return this.en.filter(e => e.alive); }
+  ex(e) { return this.fx + e.c * INV.dx; }
+  ey(e) { return this.fy + e.r * INV.dy; }
+  say(text, x, y, color) { this.pops.push({ text, x, y, t: 0, color: color || '#fff' }); }
+  fire() { this.shots.push({ x: this.px, y: INV.playerY - 26 }); this.cool = INV.shotCd; this.kick = 0.15; Sfx.play('blip'); }
+  update(dt) {
+    if (Input.back()) { this.onQuit(); return; }
+    this.t += dt; updateParticles(this.parts, dt); for (const p of this.pops) p.t += dt; this.pops = this.pops.filter(p => p.t < 1.1); if (this.kick > 0) this.kick -= dt; if (this.flash > 0) this.flash -= dt;
+    for (const e of this.en) if (e.hit > 0) e.hit -= dt;
+    switch (this.phase) {
+      case 'ready': this.pt -= dt; this.move(dt); if (this.pt <= 0) this.phase = 'play'; break;
+      case 'play': this.stepPlay(dt); break;
+      case 'dying': this.pt -= dt; if (this.pt <= 0) { if (this.lives <= 0) this.finish(); else { this.inv = 2; this.phase = 'play'; this.bombs = []; } } break;
+      case 'clear': this.pt -= dt; if (this.pt <= 0) { this.wave++; this.startWave(); } break;
+      case 'over': this.pt += dt; if (this.pt > 0.8 && Input.confirm()) this.onDone({ score: this.score }); break;
+    }
+  }
+  move(dt) { const d = (Input.down.ArrowRight || Input.down.KeyD ? 1 : 0) - (Input.down.ArrowLeft || Input.down.KeyA ? 1 : 0); this.px = clamp(this.px + d * 330 * dt, 40, W - 40); }
+  finish() { this.phase = 'over'; this.pt = 0; this.newRecord = this.score > this.best0; if (this.newRecord) { Best.set('invader.best', this.score); burst(this.parts, W / 2, 200, 60, CONFETTI, 380); Sfx.play('win'); } }
+  stepPlay(dt) {
+    this.move(dt); if (this.cool > 0) this.cool -= dt; if (this.inv > 0) this.inv -= dt;
+    const fireKey = Input.down.Space || Input.down.ArrowUp || Input.down.KeyW || Input.down.Enter;
+    if (fireKey && this.cool <= 0 && this.shots.length < 2) this.fire();
+    // la formation avance, descend au bord et accélère quand elle se vide
+    const al = this.alive(), total = INV.rows * INV.cols, sp = (46 + (total - al.length) * 3.6 + this.wave * 9) * dt * this.dir;
+    let minX = 1e9, maxX = -1e9, maxY = 0; for (const e of al) { const x = this.ex(e); minX = Math.min(minX, x); maxX = Math.max(maxX, x); maxY = Math.max(maxY, this.ey(e)); }
+    if ((this.dir > 0 && maxX + sp > INV.right - INV.size / 2) || (this.dir < 0 && minX + sp < INV.left + INV.size / 2)) { this.dir = -this.dir; this.fy += 16; } else this.fx += sp;
+    // projectiles du joueur
+    for (const s of this.shots) { s.y -= 620 * dt; }
+    for (const s of this.shots) {
+      if (s.dead) continue;
+      for (const e of al) if (e.alive && Math.abs(this.ex(e) - s.x) < 20 && Math.abs(this.ey(e) - s.y) < 20) {
+        e.alive = false; s.dead = true; const pts = 10 + (INV.rows - 1 - e.r) * 5; this.score += pts; this.say('+' + pts, this.ex(e), this.ey(e), '#ffe08a'); burst(this.parts, this.ex(e), this.ey(e), 14, [CONFETTI[e.c % 6], '#fff'], 240); Sfx.play('stomp'); break;
+      }
+      if (!s.dead && this.ufo && Math.abs(this.ufo.x - s.x) < 28 && Math.abs(62 - s.y) < 18) { const pts = 50 * (1 + Math.floor(Math.random() * 6)); this.score += pts; this.say(String(pts), this.ufo.x, 70, '#7dffd2'); burst(this.parts, this.ufo.x, 62, 24, CONFETTI, 300); Sfx.play('coin'); this.ufo = null; s.dead = true; }
+      if (!s.dead && s.y < 20) s.dead = true;
+      if (!s.dead) for (const b of this.bunkers) if (b.hp > 0 && s.x > b.x - 2 && s.x < b.x + 10 && s.y > b.y - 4 && s.y < b.y + 10) { b.hp--; s.dead = true; break; }
+    }
+    this.shots = this.shots.filter(s => !s.dead);
+    // les envahisseurs lancent des tickets
+    this.bombT -= dt; if (this.bombT <= 0 && al.length) {
+      this.bombT = Math.max(0.35, 1.05 - 0.07 * this.wave) * rnd(0.6, 1.25); const cols = [...new Set(al.map(e => e.c))], c = Math.random() < 0.4 ? Math.round((this.px - this.fx) / INV.dx) : cols[Math.floor(Math.random() * cols.length)];
+      const col = al.filter(e => e.c === clamp(c, 0, INV.cols - 1)); const sh = (col.length ? col : al).reduce((a, e) => (this.ey(e) > this.ey(a) ? e : a));
+      this.bombs.push({ x: this.ex(sh), y: this.ey(sh) + 16, vy: 190 + this.wave * 12, rot: rnd(0, 6) }); sh.hit = 0.25;
+    }
+    for (const b of this.bombs) { b.y += b.vy * dt; b.rot += dt * 5; if (b.y > H) b.dead = true; }
+    for (const b of this.bombs) {
+      if (b.dead) continue;
+      for (const k of this.bunkers) if (k.hp > 0 && b.x > k.x - 4 && b.x < k.x + 12 && b.y > k.y - 4 && b.y < k.y + 10) { k.hp--; b.dead = true; break; }
+      if (!b.dead && this.inv <= 0 && Math.abs(b.x - this.px) < 18 && Math.abs(b.y - INV.playerY) < 20) { b.dead = true; this.hurt(); return; }
+    }
+    this.bombs = this.bombs.filter(b => !b.dead);
+    // les envahisseurs mangent les boucliers qu'ils touchent
+    for (const e of al) for (const k of this.bunkers) if (k.hp > 0 && Math.abs(this.ex(e) - k.x - 4) < 22 && Math.abs(this.ey(e) - k.y - 4) < 22) k.hp = 0;
+    // soucoupe bonus : Matthieu en lapin
+    this.ufoT -= dt; if (this.ufoT <= 0 && !this.ufo) { const l = Math.random() < 0.5; this.ufo = { x: l ? -30 : W + 30, v: l ? 120 : -120 }; this.ufoT = rnd(14, 22); }
+    if (this.ufo) { this.ufo.x += this.ufo.v * dt; if (this.ufo.x < -40 || this.ufo.x > W + 40) this.ufo = null; }
+    // fin de vague / défaite
+    if (!this.alive().length) { this.phase = 'clear'; this.pt = 1.8; this.bombs = []; Sfx.play('win'); burst(this.parts, W / 2, 220, 60, CONFETTI, 380); return; }
+    if (maxY + INV.size / 2 >= INV.playerY - 24) { this.lives = 0; this.hurt(true); }
+  }
+  hurt(force) {
+    this.lives = force ? 0 : this.lives - 1; this.phase = 'dying'; this.pt = 1.3; this.flash = 0.3; Sfx.play('hurt'); burst(this.parts, this.px, INV.playerY, 26, ['#ffd23f', '#ff8a3c', '#fff'], 300);
+  }
+  draw(ctx) {
+    const mono = 'Courier New, monospace';
+    rect(ctx, 0, 0, W, H, '#03040f');
+    for (let i = 0; i < 70; i++) { const x = hash(i * 3) * W, y = (hash(i * 3 + 1) * H + this.t * (6 + hash(i) * 22)) % H; ctx.globalAlpha = 0.3 + hash(i * 7) * 0.6; rect(ctx, x, y, 2, 2, '#fff'); } ctx.globalAlpha = 1;
+    rect(ctx, 0, INV.playerY + 26, W, 2, '#2c8a4a');
+    // boucliers
+    for (const b of this.bunkers) if (b.hp > 0) rect(ctx, b.x, b.y, 8, 8, b.hp > 1 ? '#6ee86e' : '#3d8f45');
+    // envahisseurs
+    const sway = Math.sin(this.t * 4) * 2;
+    for (const e of this.alive()) { const x = this.ex(e), y = this.ey(e) + (e.c % 2 ? sway : -sway); drawHead(ctx, CHARS[e.key], x, y, INV.size, { t: this.t + e.c, mood: e.hit > 0 ? 'laugh' : e.r % 2 ? 'angry' : 'happy' }); }
+    if (this.ufo) drawHead(ctx, CHARS.lapin, this.ufo.x, 62, 38, { t: this.t, mood: 'laugh', rot: Math.sin(this.t * 6) * 0.2 });
+    // tirs
+    for (const s of this.shots) { rect(ctx, s.x - 2, s.y - 8, 4, 16, '#ffd23f'); rect(ctx, s.x - 1, s.y - 8, 2, 16, '#fff'); }
+    for (const b of this.bombs) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.sin(b.rot) * 0.5); rect(ctx, -6, -8, 12, 16, '#fffdf4'); rect(ctx, -4, -4, 8, 2, '#d6402f'); rect(ctx, -4, 0, 8, 2, '#d6402f'); rect(ctx, -4, 4, 5, 2, '#d6402f'); ctx.restore(); }
+    // canon : Stephan
+    const blink = this.inv > 0 && Math.floor(this.t * 14) % 2 === 0;
+    if (this.phase !== 'dying' && this.phase !== 'over' && !blink) {
+      rect(ctx, this.px - 20, INV.playerY + 14, 40, 10, '#cfd8ff'); rect(ctx, this.px - 3, INV.playerY - 24 - (this.kick > 0 ? 3 : 0), 6, 14, '#cfd8ff');
+      drawHead(ctx, CHARS.hero, this.px, INV.playerY, 40, { t: this.t, mood: this.kick > 0 ? 'surprised' : 'happy' });
+    }
+    drawParticles(ctx, this.parts);
+    for (const p of this.pops) { ctx.globalAlpha = clamp(1.1 - p.t, 0, 1); txt(ctx, p.text, p.x, p.y - p.t * 30, 18, p.color, 'center', 'bold', mono); ctx.globalAlpha = 1; }
+    if (this.flash > 0) { ctx.globalAlpha = this.flash; rect(ctx, 0, 0, W, H, '#ff3030'); ctx.globalAlpha = 1; }
+    // HUD
+    txt(ctx, 'SCORE ' + this.score, 20, 30, 20, '#fff', 'left', 'bold', mono); txt(ctx, 'VAGUE ' + this.wave, W / 2, 30, 18, '#8fa6ff', 'center', 'bold', mono); txt(ctx, 'RECORD ' + Math.max(this.best0, this.score), W / 2, 50, 13, '#ffe08a', 'center', 'bold', mono);
+    for (let i = 0; i < INV.lives; i++) { ctx.globalAlpha = i < this.lives ? 1 : 0.2; drawHead(ctx, CHARS.hero, W - 40 - i * 34, 26, 26, { t: this.t, mood: 'happy' }); ctx.globalAlpha = 1; }
+    txt(ctx, 'DEVE INVADER', 20, H - 8, 12, '#556', 'left', 'bold', mono);
+    if (this.phase === 'ready') { txt(ctx, 'VAGUE ' + this.wave, W / 2, 250, 40, '#ffd23f', 'center', 'bold', mono); if (this.wave === 1) txt(ctx, Device.touch ? '◀ ▶ pour bouger · TIR pour tirer' : '← →  (ou Q / D) : bouger   ·   Espace : tirer', W / 2, 290, 17, '#fff', 'center', 'bold', mono); }
+    if (this.phase === 'clear') txt(ctx, 'VAGUE TERMINÉE !', W / 2, 270, 36, '#7dffa0', 'center', 'bold', mono);
+    if (this.phase === 'over') {
+      rr(ctx, W / 2 - 240, 150, 480, 240, 18, 'rgba(3,4,15,.95)', '#ffd23f', 3);
+      txt(ctx, this.newRecord ? 'Nouveau record !' : 'Fin de partie', W / 2, 205, 34, this.newRecord ? '#7dffa0' : '#ffd23f', 'center', 'bold', mono);
+      txt(ctx, 'Score : ' + this.score, W / 2, 250, 28, '#fff', 'center', 'bold', mono); txt(ctx, 'Vague atteinte : ' + this.wave, W / 2, 285, 18, '#cfd8ff', 'center', 'bold', mono);
+      txt(ctx, 'Record : ' + Math.max(this.best0, this.score), W / 2, 315, 18, '#ffe08a', 'center', 'bold', mono);
+      if (this.pt > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, Device.touch ? 'Touche pour revenir au menu' : 'Entrée pour revenir au menu', W / 2, 360, 16, '#8fa6ff', 'center', 'bold', mono);
+    }
+  }
+}
+
+/* ============================================================
    MiniGameSelect : menu des mini-jeux (liste MINIGAMES dans content.js)
    ============================================================ */
 function startMiniGame(game, def) {
   const back = () => game.go(new MiniGameSelect(game));
-  game.go(def.type === 'broom' ? new BroomScene(game, def, back, back) : def.type === 'aura' ? new AuraScene(game, def, back, back) : def.type === 'bunny' ? new BunnyScene(game, def, back, back) : def.type === 'pong' ? new PongScene(game, def, back, back) : def.type === 'pac' ? new PacScene(game, def, back, back) : new DanceScene(game, def, back, back));
+  game.go(def.type === 'broom' ? new BroomScene(game, def, back, back) : def.type === 'aura' ? new AuraScene(game, def, back, back) : def.type === 'bunny' ? new BunnyScene(game, def, back, back) : def.type === 'pong' ? new PongScene(game, def, back, back) : def.type === 'pac' ? new PacScene(game, def, back, back) : def.type === 'invader' ? new InvaderScene(game, def, back, back) : new DanceScene(game, def, back, back));
 }
 class MiniGameSelect {
   constructor(game) { this.game = game; }
@@ -1328,8 +1448,8 @@ class MiniGameSelect {
     if (Input.menuUp()) { this.sel = (this.sel + n - 1) % n; Sfx.play('blip'); }
     if (Input.menuDown()) { this.sel = (this.sel + 1) % n; Sfx.play('blip'); }
     if (Input.tap) {
-      const i = Math.floor((Input.tap.y - 92) / 84);
-      if (Input.tap.x > 60 && Input.tap.x < 900 && i >= 0 && i < n && Input.tap.y - 92 - i * 84 < 76) { if (this.sel === i) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[i].def); return; } this.sel = i; Sfx.play('blip'); }
+      const i = Math.floor((Input.tap.y - 84) / 70);
+      if (Input.tap.x > 60 && Input.tap.x < 900 && i >= 0 && i < n && Input.tap.y - 84 - i * 70 < 64) { if (this.sel === i) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[i].def); return; } this.sel = i; Sfx.play('blip'); }
     }
     if (Input.confirm()) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[this.sel].def); return; }
     if (Input.back()) this.game.go(new TitleScene(this.game));
@@ -1339,18 +1459,19 @@ class MiniGameSelect {
     ctx.fillStyle = 'rgba(8,6,24,.72)'; ctx.fillRect(0, 0, W, H);
     txt(ctx, 'Mini-jeux', 60, 80, 40, '#ffd23f');
     MINIGAMES.forEach((g, i) => {
-      const y = 92 + i * 84, on = i === this.sel, best = g.best ? Best.get(g.best) : 0, k = 0.84;
-      rr(ctx, 60, y, 840, 76, 16, on ? '#ffd23f' : 'rgba(255,255,255,.12)', on ? '#fff' : 'rgba(255,255,255,.3)', 2);
-      ctx.save(); ctx.beginPath(); ctx.rect(70, y + 2, 270, 72); ctx.clip(); ctx.scale(k, k); const fy = (y + 70) / k;       // petites icônes
+      const y = 84 + i * 70, on = i === this.sel, best = g.best ? Best.get(g.best) : 0, k = 0.74;
+      rr(ctx, 60, y, 840, 64, 16, on ? '#ffd23f' : 'rgba(255,255,255,.12)', on ? '#fff' : 'rgba(255,255,255,.3)', 2);
+      ctx.save(); ctx.beginPath(); ctx.rect(70, y + 2, 270, 60); ctx.clip(); ctx.scale(k, k); const fy = (y + 60) / k;       // petites icônes
       if (g.icon === 'bunny') { drawCharacter(ctx, CHARS.hero, 120 / k, fy, { facing: 1, state: 'idle', t: this.t }); drawCharacter(ctx, CHARS.lapin, 215 / k, fy - 12 - (on ? Math.abs(Math.sin(this.t * 5)) * 16 : 0), { facing: 1, state: 'jump', t: this.t, rot: on ? this.t * 4 : 0 }); }
       else if (g.icon === 'duel') { drawCharacter(ctx, CHARS.hero, 120 / k, fy, { facing: 1, state: on ? 'cheer' : 'idle', t: this.t }); drawCharacter(ctx, CHARS.arno, 215 / k, fy, { facing: -1, state: on ? 'cheer' : 'idle', t: this.t + 1 }); }
       else if (g.icon === 'pong') { rect(ctx, 90 / k, (y + 14) / k, 6, 48 / k, '#fff'); rect(ctx, 300 / k, (y + 14 + (on ? Math.sin(this.t * 4) * 8 : 0)) / k, 6, 48 / k, '#fff'); drawHead(ctx, CHARS.hero, (195 + (on ? Math.sin(this.t * 4) * 70 : 0)) / k, (y + 38 + (on ? Math.cos(this.t * 6) * 10 : 0)) / k, 34, { t: this.t, mood: 'happy', rot: this.t * 2 }); }
       else if (g.icon === 'pac') { for (let d = 0; d < 4; d++) circ(ctx, (205 + d * 24) / k, (y + 38) / k, 2.5 / k * k, '#ffe2b0'); drawHead(ctx, CHARS.hero, (130 + (on ? (this.t * 60) % 40 : 0)) / k, (y + 38) / k, 38, { t: this.t, mood: Math.floor(this.t * 9) % 2 ? 'surprised' : 'happy' }); drawHead(ctx, CHARS.chef, 310 / k, (y + 38) / k, 30, { t: this.t, mood: 'angry' }); }
+      else if (g.icon === 'invader') { const sw = on ? Math.sin(this.t * 3) * 14 : 0; ['coline', 'bastien', 'arno', 'olivier'].forEach((c, n) => drawHead(ctx, CHARS[c], (130 + n * 46 + sw) / k, (y + 22) / k, 26, { t: this.t, mood: 'angry' })); drawHead(ctx, CHARS.hero, (205 + (on ? Math.sin(this.t * 4) * 50 : 0)) / k, (y + 46) / k, 24, { t: this.t, mood: 'happy' }); if (on) rect(ctx, 205 / k, (y + 32) / k, 3, 6 / k, '#ffd23f'); }
       else for (let l = 0; l < 4; l++) drawArrow(ctx, 120 / k + l * 52 / k, (y + 38) / k + Math.sin(this.t * 4 + l) * (on ? 4 : 0), l, DANCE_LANES.color[l], 19, on ? '#2a1a3e' : '#fff');
       ctx.restore();
-      txt(ctx, g.title, 350, y + 34, 28, on ? '#2a1a3e' : '#fff');
-      txt(ctx, g.desc, 350, y + 60, 15, on ? '#4a3a5e' : '#cfd8ff');
-      if (best) txt(ctx, (g.bestLabel || 'Record') + ' : ' + best + (g.bestUnit || ''), 880, y + 34, 19, on ? '#2a1a3e' : '#ffe08a', 'right');
+      txt(ctx, g.title, 350, y + 29, 26, on ? '#2a1a3e' : '#fff');
+      txt(ctx, g.desc, 350, y + 52, 15, on ? '#4a3a5e' : '#cfd8ff');
+      if (best) txt(ctx, (g.bestLabel || 'Record') + ' : ' + best + (g.bestUnit || ''), 880, y + 29, 19, on ? '#2a1a3e' : '#ffe08a', 'right');
     });
     txt(ctx, Device.touch ? 'Touche un mini-jeu, puis touche-le encore pour jouer' : '↑ ↓ : choisir   ·   Entrée : jouer   ·   Échap : retour', W / 2, H - 20, 15, '#fff', 'center');
   }
