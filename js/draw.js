@@ -436,6 +436,15 @@ function drawArrow(ctx, x, y, lane, fill, size, ring) {          // lane : 0 gau
   if (fill) { ctx.fillStyle = fill; ctx.fill(); }
   ctx.strokeStyle = ring || '#fff'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
 }
+function drawBat(ctx, x, y, ang, len) {                  // batte de baseball : manche + gros bout
+  const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len, mx = x + Math.cos(ang) * len * 0.5, my = y + Math.sin(ang) * len * 0.5;
+  line(ctx, x, y, ex, ey, '#5a3a1e', 9); line(ctx, x, y, mx, my, '#a8733c', 4.2); line(ctx, mx, my, ex, ey, '#d9a55a', 8.4);
+  line(ctx, mx + Math.cos(ang) * 6, my + Math.sin(ang) * 6 - 2, ex, ey - 2, 'rgba(255,255,255,.35)', 1.8); circ(ctx, x, y, 3.4, '#3a2410');
+}
+function drawBalloon(ctx, x, y, t, col) {
+  const sw = Math.sin(t * 2 + x) * 4; ctx.strokeStyle = 'rgba(60,60,80,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y + 26); ctx.quadraticCurveTo(x + sw, y + 46, x - sw, y + 70); ctx.stroke();
+  ell(ctx, x, y, 22, 27, col); ell(ctx, x - 7, y - 9, 6, 9, 'rgba(255,255,255,.45)'); poly(ctx, [[x - 4, y + 26], [x + 4, y + 26], [x, y + 33]], shade(col, -0.2));
+}
 function drawBroom(ctx, x, y, ang, len) {                 // manche du balai depuis (x,y) dans la direction ang
   const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len;
   line(ctx, x, y, ex, ey, '#8d6e3f', 3.6);
@@ -573,6 +582,7 @@ const THEMES = {
   charlies:  { floor: '#2a2a2a', floorTop: '#f1ece0', plat: '#8b2c22', platTop: '#d9503f', label: "Charlie's" },
   gastro:    { floor: '#2a1f1a', floorTop: '#c9a24a', plat: '#e9e4d8', platTop: '#c9a24a', label: 'Restaurant gastro' },
   crise:     { floor: '#5e4a58', floorTop: '#c46a6a', plat: '#8a3a3a', platTop: '#ff6a5a', label: 'Open space en crise' },
+  ville:     { floor: '#8a6a4a', floorTop: '#59b04a', plat: '#8a6a4a', platTop: '#59b04a', label: 'La ville' },
   circuit:   { floor: '#0a2a20', floorTop: '#c9a24a', plat: '#14543c', platTop: '#d9b64a', label: 'Carte mère' },
   pi:        { floor: '#2b2238', floorTop: '#5a4a6b', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle PI' },
   reunion:   { floor: '#3b2f45', floorTop: '#6a5580', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle de réunion' },
@@ -681,6 +691,16 @@ BG.crise = (ctx, cx, t) => {
     rr(ctx, x + 520, 296, 150, 36, 6, '#2a0508', '#ff4040', 3); txt(ctx, 'ALERTE CYBER', x + 595, 311, 14, '#ff6a6a', 'center'); txt(ctx, 'CVE-2026-3569-8569', x + 595, 326, 10, '#ffd0d0', 'center');
   });
   ctx.fillStyle = 'rgba(210,0,0,' + (0.07 + 0.05 * Math.sin(t * 6)) + ')'; ctx.fillRect(0, 0, W, H);
+};
+BG.ville = (ctx, cx, t) => {
+  vgrad(ctx, 0, H, '#6fbef2', '#eaf7ff');
+  circ(ctx, 780, 90, 46, '#fff3b0'); ctx.globalAlpha = 0.25; circ(ctx, 780, 90, 72, '#fff3b0'); ctx.globalAlpha = 1;
+  par(cx, 0.08, 420, (x, i) => { const cy = 50 + hash(i * 7) * 120, cxp = x + hash(i * 3) * 200; ell(ctx, cxp, cy, 70, 20, 'rgba(255,255,255,.85)'); ell(ctx, cxp + 34, cy - 12, 44, 18, 'rgba(255,255,255,.85)'); ell(ctx, cxp - 36, cy - 8, 38, 16, 'rgba(255,255,255,.85)'); });
+  par(cx, 0.25, 150, (x, i) => { const w = 70 + hash(i * 5) * 60, h = 120 + hash(i * 9) * 170; rect(ctx, x, FLOOR_Y - h, w, h, '#b3cde6'); rect(ctx, x, FLOOR_Y - h, w, 5, '#c9def0'); });
+  par(cx, 0.5, 190, (x, i) => {
+    const w = 80 + hash(i * 11) * 60, h = 90 + hash(i * 13) * 140; rect(ctx, x + 10, FLOOR_Y - h, w, h, '#93b4d2'); rect(ctx, x + 10, FLOOR_Y - h, w, 5, '#a7c3dd');
+    for (let r = 0; r < h / 24 - 1; r++) for (let c = 0; c < w / 18 - 1; c++) if (hash(i * 100 + r * 7 + c) > 0.4) rect(ctx, x + 18 + c * 18, FLOOR_Y - h + 12 + r * 24, 9, 12, '#e3f1fb');
+  });
 };
 BG.circuit = (ctx, cx, t) => {
   vgrad(ctx, 0, H, '#04201a', '#0a3a2a');

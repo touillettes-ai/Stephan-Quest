@@ -643,7 +643,7 @@ const DANCE = { speed: 220, hitY: 70, spawnY: 395, win: 0.17, perfect: 0.07, bon
 const DANCE_LANES = { x: [360, 440, 520, 600], color: ['#ff5ac8', '#4fd8ff', '#7dff7d', '#ffb347'], keys: [['ArrowLeft', 'KeyA'], ['ArrowDown', 'KeyS'], ['ArrowUp', 'KeyW'], ['ArrowRight', 'KeyD']] };
 class DanceScene {
   constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
-  get touchMode() { return this.done ? 'menu' : 'dance'; }
+  get touchMode() { return this.done ? 'menu' : this.def.free ? 'dancefree' : 'dance'; }
   enter() {
     this.song = MUSIC[this.def.song || 'dancing']; this.bg = this.def.bg || 'bar'; this.theme = this.def.theme || 'bar';
     this.arrows = this.song.arrows.map(([t, lane]) => ({ t, lane, state: 0 }));
@@ -654,8 +654,12 @@ class DanceScene {
   songTime() { return Music.playing ? Music.time() : this.t - DANCE.lead; }
   restart() { Music.stop(); this.game.go(new DanceScene(this.game, this.def, this.onDone, this.onQuit)); }
   pop(text, color, y) { this.pops.push({ text, color, y: y || 200, t: 0 }); }
-  finish() { if (this.done) return; this.done = true; this.doneT = 0; Music.stop(); Sfx.play('win'); burst(this.parts, 480, 150, 90, CONFETTI, 380); }
+  finish() {
+    if (this.done) return; this.done = true; this.doneT = 0; Music.stop(); Sfx.play('win'); burst(this.parts, 480, 150, 90, CONFETTI, 380);
+    if (this.def.free) { const key = 'dance.' + (this.def.song || 'dancing'); this.prevBest = Best.get(key); this.record = this.score > this.prevBest; if (this.record) Best.set(key, this.score); }
+  }
   update(dt) {
+    if (this.def.free && Input.back()) { Music.stop(); this.onQuit(); return; }                    // mini-jeu : Échap = retour au menu
     if (Input.pressed.KeyR && !this.done) { this.restart(); return; }
     this.t += dt; updateParticles(this.parts, dt); this.poseT -= dt;
     for (let i = 0; i < 4; i++) this.pressed[i] = Math.max(0, this.pressed[i] - dt);
@@ -707,8 +711,9 @@ class DanceScene {
     rr(ctx, 12, 10, 270, 74, 12, 'rgba(14,18,34,.82)', 'rgba(143,166,255,.6)', 1.5);
     txt(ctx, 'Points : ' + this.score, 26, 38, 22, '#ffe08a'); txt(ctx, 'Combo : ' + this.combo, 26, 62, 16, '#cfd8ff'); txt(ctx, 'Flèches : ' + this.hits + '/' + this.arrows.length, 150, 62, 16, '#cfd8ff');
     rr(ctx, 26, 70, 242, 8, 4, 'rgba(255,255,255,.15)'); rr(ctx, 26, 70, 242 * ((this.hits % DANCE.every) / DANCE.every), 8, 4, '#ff9af0');
-    const left = clamp(1 - Math.max(0, st) / this.song.length, 0, 1);
-    rr(ctx, W - 150, 10, 138, 34, 12, 'rgba(14,18,34,.82)'); txt(ctx, Math.ceil(left * this.song.length) + ' s', W - 81, 34, 20, '#fff', 'center');
+    const left = clamp(1 - Math.max(0, st) / this.song.length, 0, 1), secs = Math.ceil(left * this.song.length);
+    rr(ctx, W - 150, 10, 138, 34, 12, 'rgba(14,18,34,.82)'); txt(ctx, secs >= 100 ? Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0') : secs + ' s', W - 81, 34, 20, '#fff', 'center');
+    rr(ctx, W - 150, 50, 138, 6, 3, 'rgba(255,255,255,.18)'); rr(ctx, W - 150, 50, 138 * (1 - left), 6, 3, '#ffd23f');
     if (st < 0) txt(ctx, st < -1.6 ? 'Prêts ?' : Math.ceil(-st), 480, 230, 54, '#fff', 'center');
     if (this.t < 7) { const a = clamp(Math.min(this.t / 0.4, (7 - this.t) / 0.6), 0, 1); ctx.globalAlpha = a; rr(ctx, 160, 410, 640, 40, 12, 'rgba(14,18,34,.88)', '#8fa6ff', 2); txt(ctx, Device.touch ? 'Touche la bonne flèche (en bas) au bon moment !' : '← ↑ ↓ → (ou Q Z S D) : appuie sur la bonne flèche au bon moment !', 480, 436, 16, '#fff', 'center'); ctx.globalAlpha = 1; }
     if (this.done) {
@@ -717,7 +722,8 @@ class DanceScene {
       txt(ctx, ratio > 0.85 ? 'Dancing King !' : ratio > 0.5 ? 'Belle prestation !' : 'On a dansé, c\'est l\'essentiel !', W / 2, 145, 34, '#ffd23f', 'center');
       txt(ctx, this.score + ' points', W / 2, 192, 30, '#fff', 'center');
       txt(ctx, this.hits + '/' + this.arrows.length + ' flèches · ' + this.bonuses + ' bonus · meilleur combo ' + this.best, W / 2, 232, 18, '#cfd8ff', 'center');
-      if (this.doneT > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée pour continuer', W / 2, 300, 18, '#8fa6ff', 'center');
+      if (this.def.free) txt(ctx, this.record ? 'Nouveau record !' : 'Record : ' + this.prevBest + ' points', W / 2, 268, 20, this.record ? '#7dffa0' : '#ffe08a', 'center');
+      if (this.doneT > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée pour continuer', W / 2, 308, 18, '#8fa6ff', 'center');
     }
   }
 }
@@ -748,11 +754,11 @@ class TitleScene {
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 4) burst(this.parts, rnd(60, 900), 0, 3, CONFETTI, 30);
-    if (Input.menuUp() || Input.menuDown()) { this.sel = 1 - this.sel; Sfx.play('blip'); }
-    if (Input.tap) for (let i = 0; i < 2; i++) { const y = 262 + i * 58; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
+    if (Input.menuUp()) { this.sel = (this.sel + 2) % 3; Sfx.play('blip'); } else if (Input.menuDown()) { this.sel = (this.sel + 1) % 3; Sfx.play('blip'); }
+    if (Input.tap) for (let i = 0; i < 3; i++) { const y = 254 + i * 50; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
     if (Input.confirm()) this.go();
   }
-  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else this.game.go(new ChapterSelect(this.game)); }
+  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else this.game.go(new MiniGameSelect(this.game)); }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) { drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE); ctx.globalAlpha = 0.3; rect(ctx, x, y, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(x / TILE + y / TILE + Math.floor(this.t * 1.6)) % 4]); ctx.globalAlpha = 1; }
@@ -764,8 +770,8 @@ class TitleScene {
     const ry = ty0 + (tl.length - 1) * 64 + 24;
     rr(ctx, W / 2 - 270, ry, 540, 44, 10, '#d6402f', '#fff', 3); poly(ctx, [[W / 2 - 270, ry + 14], [W / 2 - 296, ry + 14], [W / 2 - 280, ry + 22], [W / 2 - 296, ry + 32], [W / 2 - 270, ry + 32]], '#a02a1e'); poly(ctx, [[W / 2 + 270, ry + 14], [W / 2 + 296, ry + 14], [W / 2 + 280, ry + 22], [W / 2 + 296, ry + 32], [W / 2 + 270, ry + 32]], '#a02a1e');
     txt(ctx, CONFIG.subtitle, W / 2, ry + 31, 24, '#fff', 'center');
-    ['Jouer', 'Choisir un chapitre'].forEach((s, i) => {
-      const y = 262 + i * 58, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
+    ['Jouer', 'Choisir un chapitre', 'Mini-jeux'].forEach((s, i) => {
+      const y = 254 + i * 50, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
       if (on) { ctx.globalAlpha = 0.35; rr(ctx, W / 2 - 190, y - 32, 380, 50, 25, '#ffd23f'); ctx.globalAlpha = 1; }
       rr(ctx, W / 2 - 170, y - 28, 340, 44, 22, on ? '#ffd23f' : 'rgba(20,16,44,.88)', on ? '#fff' : 'rgba(255,255,255,.35)', 2.5);
       txt(ctx, s, W / 2, y + 2, 25, on ? '#2a1a3e' : '#fff', 'center');
@@ -773,6 +779,342 @@ class TitleScene {
     });
     rr(ctx, 70, H - 36, W - 140, 26, 13, 'rgba(8,6,24,.7)');
     txt(ctx, Device.touch ? 'Touche un bouton pour jouer   ·   Touche l\'écran pour faire défiler les dialogues   ·   Boutons à l\'écran : bouger / sauter / pause' : '← → (ou Q D) : bouger   ·   Espace (ou Z / ↑) : sauter   ·   Entrée : dialogues   ·   Échap : pause   ·   M : son', W / 2, H - 18, 13, 'rgba(255,255,255,.92)', 'center');
+  }
+}
+
+/* ============================================================
+   AuraScene : « Battle d'aura » — Stephan contre Arno, chacun son tour sur 15 flèches (mécanique DDR)
+   def : { type:'aura', mode:'cpu'|'duo', song:'full' } · 3 manches gagnées = victoire
+   ============================================================ */
+const AURA = { arrows: 15, sudden: 5, speed: 193, hitY: 62, spawnY: 335, travel: 1.4, toWin: 3, lead: 2.0, bar: 2.4, win: 0.17, perfect: 0.07, resultT: 3.6 };
+const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; };
+class AuraScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.over ? 'menu' : 'dancefree'; }
+  enter() {
+    const keys = this.def.songs || ['dre', 'gangsta']; this.songKey = keys[Math.floor(Math.random() * keys.length)];          // une chanson au hasard à chaque match
+    this.song = MUSIC[this.songKey]; this.s0 = this.song.start || 0; this.cpu = this.def.mode !== 'duo';
+    const mk = (key, name, x, face, color) => ({ key, name, x, face, color, lane: [x - 90, x - 30, x + 30, x + 90], wins: 0, combo: 0, aura: 0, fx: null, fxT: 0, active: false });
+    this.p = [mk('hero', 'Stephan', 300, 1, '#ffd23f'), mk('arno', 'Arno', 660, -1, '#b46bff')];
+    this.t = 0; this.parts = []; this.arrows = []; this.round = 1; this.turn = 0; this.pt = 0; this.pressed = [0, 0, 0, 0]; this.pops = [];
+    this.score = [{ hits: 0, perf: 0 }, { hits: 0, perf: 0 }]; this.roundWinner = -2; this.sudden = false; this.n = AURA.arrows; this.off = 0; this.over = false; this.winner = -1; this.phase = 'intro'; this.shake = 0; this.tearT = 0;
+    Music.start(this.song, AURA.lead, this.s0);
+  }
+  songTime() { return Music.playing ? Music.time() : this.t - AURA.lead + this.s0 - this.off; }
+  pop(text, color, x, y) { this.pops.push({ text, color, x, y, t: 0 }); }
+  startRound(st) {
+    if (st > this.song.length - 34) { Music.start(this.song, 0.4, this.s0); this.off = this.t - AURA.lead + 0.4; st = this.songTime(); }   // la chanson repart du début si la partie dure longtemps
+    this.score = [{ hits: 0, perf: 0 }, { hits: 0, perf: 0 }]; this.roundWinner = -2; this.n = this.sudden ? AURA.sudden : AURA.arrows; this.startTurn(0, st);
+  }
+  startTurn(i, st) {                                                              // les flèches sont posées sur les vrais temps forts de la chanson (grosse caisse, caisse claire, clap)
+    this.turn = i; const hits = this.song.hits, from = st + AURA.travel + 0.7, arr = []; let k = 0, lastLane = -1, run = 0;
+    while (k < hits.length && hits[k] < from) k++;
+    for (; k < hits.length && arr.length < this.n; k++) {
+      let lane = Math.floor(Math.random() * 4);
+      if (lane === lastLane) { if (++run >= 2) { lane = (lane + 1 + Math.floor(Math.random() * 3)) % 4; run = 0; } } else run = 0;
+      arr.push({ t: hits[k], lane, state: 0 }); lastLane = lane;
+    }
+    this.arrows = arr; this.firstT = arr.length ? arr[0].t : from; this.lastT = arr.length ? arr[arr.length - 1].t : from; this.p.forEach((q, j) => { q.active = j === i; q.combo = 0; });
+    const cpuP = clamp(0.66 + 0.05 * (this.round - 1) + 0.06 * (this.p[0].wins - this.p[1].wins) + rnd(-0.1, 0.1), 0.5, 0.95);
+    if (this.cpu && i === 1) for (const a of arr) { a.cpuHit = Math.random() < cpuP; a.cpuT = a.t + rnd(-0.07, 0.07); }
+    this.phase = 'turn';
+  }
+  hit(i, a, perfect) {
+    const q = this.p[i]; a.state = 1; this.score[i].hits++; if (perfect) this.score[i].perf++; q.combo++;
+    const poses = ['cheer', 'wave', 'jump', 'cheer'];                              // mouvements aléatoires façon battle d'aura
+    q.fx = { pose: poses[Math.floor(Math.random() * 4)], rot: rnd(-0.28, 0.28), dx: rnd(-16, 16), dy: rnd(-14, 0), sq: rnd(0.9, 1.14), mood: Math.random() < 0.5 ? 'laugh' : 'happy' }; q.fxT = 0.38;
+    burst(this.parts, q.x, FLOOR_Y - 60, perfect ? 12 : 7, [q.color, '#fff', hexA(q.color, 0.8)], 200); this.shake = 0.12;
+    this.pop(perfect ? 'PARFAIT' : 'BIEN', perfect ? '#ffe08a' : '#8fe3ff', q.x, 300);
+    Sfx.play(this.cpu && i === 1 ? 'blip' : 'coin');
+  }
+  resolveRound() {
+    const a = this.score[0], b = this.score[1], d = a.hits !== b.hits ? a.hits - b.hits : a.perf - b.perf;
+    this.roundWinner = d > 0 ? 0 : d < 0 ? 1 : -1; this.phase = 'result'; this.pt = 0; this.p.forEach(q => { q.active = false; });
+    this.sudden = this.roundWinner === -1;                                         // égalité parfaite : manche décisive en mort subite (5 flèches chacun)
+    if (this.roundWinner >= 0) { this.p[this.roundWinner].wins++; Sfx.play('win'); burst(this.parts, this.p[this.roundWinner].x, FLOOR_Y - 90, 50, CONFETTI, 360); }
+  }
+  endMatch() {
+    this.over = true; this.phase = 'end'; this.pt = 0; this.winner = this.p[0].wins >= AURA.toWin ? 0 : 1; Music.stop(); Sfx.play('win');
+    burst(this.parts, this.p[this.winner].x, FLOOR_Y - 90, 90, CONFETTI, 420);
+    if (this.cpu && this.winner === 0) Best.set('aura.cpu', Best.get('aura.cpu') + 1);
+  }
+  update(dt) {
+    if (Input.back()) { Music.stop(); this.onQuit(); return; }
+    this.t += dt; this.pt += dt; updateParticles(this.parts, dt); Music.update();
+    if (this.shake > 0) this.shake -= dt;
+    for (const o of this.pops) o.t += dt; this.pops = this.pops.filter(o => o.t < 0.8);
+    for (let i = 0; i < 4; i++) this.pressed[i] = Math.max(0, this.pressed[i] - dt);
+    const st = this.songTime();
+    for (const q of this.p) {                                                       // l'aura monte avec le combo et brûle en flammèches
+      q.aura += ((q.active && q.combo > 0 ? Math.min(1, 0.3 + q.combo / 7) : 0) - q.aura) * Math.min(1, dt * 4); if (q.fxT > 0) q.fxT -= dt;
+      if (q.aura > 0.25 && Math.random() < dt * 40 * q.aura) this.parts.push({ x: q.x + rnd(-24, 24), y: FLOOR_Y - rnd(0, 50), vx: rnd(-18, 18), vy: rnd(-130, -60), g: -40, life: rnd(0.5, 0.95), max: 0.95, size: rnd(3, 6), c: Math.random() < 0.4 ? '#fff' : q.color, rot: rnd(0, 6) });
+    }
+    if (this.phase === 'result' || this.phase === 'end') {                         // le perdant pleure
+      this.tearT -= dt;
+      if (this.tearT <= 0) { this.tearT = 0.06; const loser = this.phase === 'end' ? 1 - this.winner : this.roundWinner >= 0 ? 1 - this.roundWinner : -1;
+        if (loser >= 0) { const q = this.p[loser]; this.parts.push({ x: q.x + q.face * 12, y: FLOOR_Y - 58, vx: q.face * rnd(10, 45), vy: rnd(-40, 10), g: 420, life: 0.7, max: 0.7, size: 4, c: '#6ad0ff', rot: 0 }); } }
+    }
+    switch (this.phase) {
+      case 'intro': if (st >= this.s0 + 1.4) this.startRound(st); break;
+      case 'turn': this.updateTurn(st); break;
+      case 'result': if (this.pt > AURA.resultT) { if (this.p.some(q => q.wins >= AURA.toWin)) this.endMatch(); else { if (this.roundWinner !== -1) this.round++; this.startRound(st); } } break;
+      case 'end': if (this.pt > 1 && Input.confirm()) { Music.stop(); this.onDone({ winner: this.winner }); } break;
+    }
+  }
+  updateTurn(st) {
+    const i = this.turn, human = !(this.cpu && i === 1);
+    if (human) for (let lane = 0; lane < 4; lane++) {
+      if (!DANCE_LANES.keys[lane].some(k => Input.pressed[k])) continue;
+      this.pressed[lane] = 0.15; let best = null;
+      for (const a of this.arrows) if (a.state === 0 && a.lane === lane && Math.abs(a.t - st) <= AURA.win && (!best || Math.abs(a.t - st) < Math.abs(best.t - st))) best = a;
+      if (best) this.hit(i, best, Math.abs(best.t - st) <= AURA.perfect); else this.p[i].combo = 0;
+    } else for (const a of this.arrows) if (a.state === 0 && a.cpuHit && st >= a.cpuT) this.hit(i, a, Math.abs(a.cpuT - a.t) <= AURA.perfect);
+    for (const a of this.arrows) if (a.state === 0 && st - a.t > AURA.win) { a.state = 2; this.p[i].combo = 0; }
+    if (st > this.lastT + 0.9) { if (i === 0) this.startTurn(1, st); else this.resolveRound(); }
+  }
+  drawFighter(ctx, q, i) {
+    const res = this.phase === 'result' || this.phase === 'end', win = res && (this.phase === 'end' ? this.winner === i : this.roundWinner === i), lose = res && (this.phase === 'end' ? this.winner !== i : this.roundWinner === 1 - i);
+    let state = 'idle', dx = 0, dy = 0, rot = 0, sq, mood;
+    if (win) { state = 'cheer'; dy = -Math.abs(Math.sin(this.t * 9)) * 36; mood = 'laugh'; }
+    else if (lose) { state = 'idle'; rot = 0.16 * q.face; mood = 'sad'; }
+    else if (q.fxT > 0) { const f = q.fx; state = f.pose; dx = f.dx; dy = f.dy; rot = f.rot; sq = f.sq; mood = f.mood; }
+    if (q.aura > 0.03) {                                                            // halo d'aura
+      const cx = q.x + dx, cy = FLOOR_Y - 50, r = (60 + 75 * q.aura) * (1 + Math.sin(this.t * 9 + i) * 0.08), g = ctx.createRadialGradient(cx, cy, 6, cx, cy, r);
+      g.addColorStop(0, hexA(q.color, 0.6 * q.aura)); g.addColorStop(1, hexA(q.color, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy - 12, r * 0.8, r * 1.2, 0, 0, 6.2832); ctx.fill();
+    }
+    drawCharacter(ctx, CHARS[q.key], q.x + dx, FLOOR_Y + dy, { facing: q.face, state, t: this.t + i * 1.3, rot, squash: sq, mood });
+  }
+  drawPanel(ctx, q, i, st) {
+    const x0 = q.lane[0] - 40, w = q.lane[3] - q.lane[0] + 80, on = q.active;
+    ctx.globalAlpha = on ? 1 : 0.4; rr(ctx, x0, 14, w, AURA.spawnY + 12, 14, 'rgba(10,8,30,.68)', on ? q.color : 'rgba(255,255,255,.3)', on ? 3 : 2);
+    for (let l = 0; l < 4; l++) drawArrow(ctx, q.lane[l], AURA.hitY, l, on && this.pressed[l] > 0 ? DANCE_LANES.color[l] : 'rgba(255,255,255,.07)', 21, DANCE_LANES.color[l]);
+    if (on) for (const a of this.arrows) {
+      if (a.state === 1) continue; const y = AURA.hitY + (a.t - st) * AURA.speed; if (y > AURA.spawnY + 24 || y < -30) continue;
+      ctx.globalAlpha = a.state === 2 ? 0.25 : clamp((AURA.spawnY + 24 - y) / 40, 0, 1); drawArrow(ctx, q.lane[a.lane], y, a.lane, DANCE_LANES.color[a.lane], 21, '#fff');
+    }
+    ctx.globalAlpha = 1;
+    txt(ctx, this.score[i].hits + '/' + this.n, x0 + w - 12, AURA.spawnY + 2, 18, on ? '#ffe08a' : 'rgba(255,255,255,.5)', 'right');
+  }
+  draw(ctx) {
+    const st = this.songTime(), sh = this.shake > 0 ? rnd(-3, 3) : 0;
+    ctx.save(); ctx.translate(sh, sh);
+    drawBackground(ctx, 'openspace', 0, 0, this.t);
+    for (let tx = 0; tx <= W / TILE; tx++) for (let ty = FLOOR_Y / TILE; ty < H / TILE; ty++) drawTile(ctx, 'openspace', '#', tx * TILE, ty * TILE, ty === FLOOR_Y / TILE, tx, ty);
+    ctx.fillStyle = 'rgba(8,6,24,.35)'; ctx.fillRect(0, 0, W, H);
+    this.p.forEach((q, i) => this.drawFighter(ctx, q, i));
+    drawParticles(ctx, this.parts);
+    this.p.forEach((q, i) => this.drawPanel(ctx, q, i, st));
+    for (const o of this.pops) { ctx.globalAlpha = clamp(1 - o.t / 0.8, 0, 1); txt(ctx, o.text, o.x, o.y - o.t * 40, 22, o.color, 'center'); ctx.globalAlpha = 1; }
+    ctx.restore();
+    this.drawHUD(ctx, st);
+  }
+  drawHUD(ctx, st) {
+    rr(ctx, W / 2 - 100, 8, 200, 34, 12, 'rgba(14,18,34,.85)', 'rgba(143,166,255,.6)', 1.5); txt(ctx, this.sudden ? 'MORT SUBITE' : 'MANCHE ' + this.round, W / 2, 32, 20, this.sudden ? '#ff7a7a' : '#ffe08a', 'center');
+    rr(ctx, 8, H - 34, 250, 26, 13, 'rgba(14,18,34,.72)'); txt(ctx, '♪ ' + this.song.title + ' — ' + this.song.artist, 22, H - 16, 13, '#fff');
+    this.p.forEach((q, i) => {
+      const x = i === 0 ? 20 : W - 20, al = i === 0 ? 'left' : 'right';
+      txt(ctx, q.name, x, 62, 20, q.color, al);
+      for (let k = 0; k < AURA.toWin; k++) { const cx = i === 0 ? 26 + k * 24 : W - 26 - k * 24; circ(ctx, cx, 80, 8, k < q.wins ? q.color : 'rgba(255,255,255,.18)'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, 80, 8, 0, 6.2832); ctx.stroke(); }
+    });
+    let msg = null, sub = null;
+    if (this.phase === 'intro') { msg = 'BATTLE D\'AURA'; sub = 'Stephan  VS  Arno · premier à ' + AURA.toWin + ' manches'; }
+    else if (this.phase === 'turn' && st < this.firstT - AURA.travel + 0.3) { msg = (this.sudden ? 'MORT SUBITE · ' : '') + 'Au tour de ' + this.p[this.turn].name + ' !'; sub = (this.cpu && this.turn === 1) ? 'L\'ordinateur joue…' : this.n + ' flèches : fais le plus de points !'; }
+    else if (this.phase === 'result') {
+      const tied = this.score[0].hits === this.score[1].hits, why = tied && this.roundWinner >= 0 ? ' (plus de coups parfaits)' : '';
+      msg = this.roundWinner < 0 ? 'Égalité parfaite !' : 'Manche pour ' + this.p[this.roundWinner].name + ' !';
+      sub = this.roundWinner < 0 ? 'Mort subite : ' + AURA.sudden + ' flèches chacun pour départager' : this.p[0].name + ' ' + this.score[0].hits + '/' + this.n + '  ·  ' + this.p[1].name + ' ' + this.score[1].hits + '/' + this.n + why;
+    }
+    if (msg) { rr(ctx, W / 2 - 280, 172, 560, sub ? 82 : 54, 16, 'rgba(14,18,34,.88)', '#ffd23f', 3); txt(ctx, msg, W / 2, 212, 30, '#ffd23f', 'center'); if (sub) txt(ctx, sub, W / 2, 242, 17, '#cfd8ff', 'center'); }
+    if (this.over) {
+      rr(ctx, W / 2 - 280, 120, 560, 150, 18, 'rgba(14,18,34,.94)', '#ffd23f', 3);
+      txt(ctx, this.p[this.winner].name + ' gagne le match !', W / 2, 180, 36, '#ffd23f', 'center'); txt(ctx, this.p[0].wins + ' - ' + this.p[1].wins, W / 2, 222, 28, '#fff', 'center');
+      if (this.pt > 1 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée pour continuer', W / 2, 255, 17, '#8fa6ff', 'center');
+    }
+    if (this.t < 6 && this.phase !== 'end') { ctx.globalAlpha = clamp(Math.min(this.t / 0.4, (6 - this.t) / 0.6), 0, 1); txt(ctx, Device.touch ? 'Touche les flèches en bas quand c\'est ton tour !' : '← ↑ ↓ → (ou Q Z S D) : appuie sur la bonne flèche à ton tour !', W / 2, H - 22, 15, '#fff', 'center'); ctx.globalAlpha = 1; }
+  }
+}
+
+/* ============================================================
+   BunnyScene : « Lapin Sport » (façon Yeti Sport) — Matthieu en lapin saute d'un immeuble, Stephan le frappe à la batte
+   1) fixer l'angle  2) frapper quand le lapin passe dans le cercle  3) booster en vol (carottes) · 3 lancers, meilleur record gardé
+   ============================================================ */
+const BUNNY = { g: 900, fg: 330, fallT: 1.7, rq: 75, reach: 105, hand: [8, 428], pxPerM: 12, tries: 3, roof: [-128, 86] };
+const balloonAt = k => ({ x: 650 + k * 520 + hash(k * 3 + 1) * 230, y: 130 + hash(k * 3 + 2) * 230 });
+const springAt = k => 1000 + k * 1150 + hash(k * 5 + 4) * 300;
+class BunnyScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.phase === 'over' ? 'menu' : 'one'; }
+  enter() { this.t = 0; this.cur = 0; this.dists = []; this.best0 = Best.get('lapin.best'); this.bestThrow = 0; this.startThrow(); }
+  startThrow() {
+    this.phase = 'aim'; this.pt = 0; this.theta = 0.8; this.parts = []; this.pops = [];
+    this.m = { x: BUNNY.roof[0], y: BUNNY.roof[1], vx: 0, vy: 0, rot: 0, state: 'idle', dir: 1 }; this.cam = { x: -260, y: 0 };
+    this.swung = false; this.swingT = -1; this.boosts = 3; this.stillT = 0; this.q = 0; this.shake = 0; this.popped = new Set(); this.flyT = 0; this.maxX = 0; this.msg = null; this.msgT = 0; this.path = null; this.hitPos = null; this.dmin = 1e9;
+  }
+  act() { return ['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'KeyW'].some(k => Input.pressed[k]); }
+  sweet() { return { x: BUNNY.hand[0] + Math.cos(this.theta) * BUNNY.reach, y: BUNNY.hand[1] - Math.sin(this.theta) * BUNNY.reach }; }
+  say(text, color) { this.msg = { text, color: color || '#ffd23f' }; this.msgT = 1.4; }
+  leap() {                                                                     // Matthieu saute : une parabole qui passe près de la zone de frappe
+    const T = BUNNY.fallT, S = { x: 70 + rnd(-35, 35), y: 335 + rnd(-30, 30) }, x0 = BUNNY.roof[0], y0 = BUNNY.roof[1];
+    this.path = { x0, y0, vx: (S.x - x0) / T, vy: (S.y - y0 - 0.5 * BUNNY.fg * T * T) / T }; this.phase = 'fall'; this.fallT = 0; Sfx.play('jump');
+  }
+  launch(q) {
+    const m = this.m;
+    if (q > 0 && this.hitPos) { m.x = this.hitPos.x; m.y = this.hitPos.y; }
+    const power = q > 0 ? 420 + 1130 * Math.pow(q, 0.9) : 130, ang = q > 0 ? this.theta + rnd(-1, 1) * (1 - q) * 0.25 : 1.0;
+    m.vx = q > 0 ? Math.cos(ang) * power : this.path.vx * 0.5; m.vy = q > 0 ? -Math.sin(ang) * power : 0; this.q = q; this.phase = 'fly'; this.flyT = 0; this.shake = q > 0 ? 0.35 : 0;
+    if (q > 0) { burst(this.parts, m.x, m.y, 26, ['#fff', '#ffe08a', '#ff8a3c'], 380); Sfx.play('win'); this.say(q > 0.85 ? 'SMASH PARFAIT !' : q > 0.55 ? 'Beau coup !' : 'Un peu mou…', q > 0.85 ? '#ff7a7a' : '#ffd23f'); }
+    else { this.say('Raté !', '#cfd8ff'); Sfx.play('hurt'); }
+  }
+  endThrow() {
+    const d = Math.floor(Math.max(0, this.maxX) / BUNNY.pxPerM); this.dists.push(d); this.bestThrow = Math.max(this.bestThrow, d);
+    this.m.state = 'hurt'; this.m.rot = Math.PI / 2; this.phase = 'result'; this.pt = 0; this.lastDist = d; this.newRecord = d > Math.max(this.best0, ...this.dists.slice(0, -1), 0); Sfx.play(d > 60 ? 'win' : 'blip');
+  }
+  next() {
+    if (this.cur + 1 >= BUNNY.tries) {
+      this.phase = 'over'; this.pt = 0; this.recordNow = this.bestThrow > this.best0; if (this.recordNow) Best.set('lapin.best', this.bestThrow);
+      burst(this.parts, 480, 150, 70, CONFETTI, 380); Sfx.play('win');
+    } else { this.cur++; this.startThrow(); }
+  }
+  update(dt) {
+    if (Input.back()) { this.onQuit(); return; }
+    this.t += dt; this.pt += dt; updateParticles(this.parts, dt); if (this.shake > 0) this.shake -= dt; if (this.msgT > 0) this.msgT -= dt;
+    const act = this.act();
+    switch (this.phase) {
+      case 'aim': this.theta = lerp(0.2, 1.35, 0.5 + 0.5 * Math.sin(this.pt * 2.6)); if (act) { Sfx.play('blip'); this.phase = 'wait'; this.pt = 0; } break;
+      case 'wait': if (this.pt > 0.8) this.leap(); break;
+      case 'fall': this.updateFall(dt, act); break;
+      case 'fly': this.updateFly(dt, act); break;
+      case 'result': if (this.pt > 0.8 && act) this.next(); break;
+      case 'over': if (this.pt > 0.8 && act) this.onDone({ best: this.bestThrow }); break;
+    }
+    const m = this.m, fly = this.phase === 'fly' || this.phase === 'result', tx = fly ? Math.max(-260, m.x - 240) : -260, ty = fly ? Math.min(0, m.y - 250) : 0;
+    this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 5); this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 4);
+  }
+  updateFall(dt, act) {
+    this.fallT += dt; const m = this.m, p = this.path, tau = this.fallT;
+    m.x = p.x0 + p.vx * tau; m.y = p.y0 + p.vy * tau + 0.5 * BUNNY.fg * tau * tau; m.rot = Math.sin(tau * 9) * 0.3; m.state = 'jump';
+    if (!this.swung && act) { this.swung = true; this.swingT = 0; this.dmin = 1e9; Sfx.play('stomp'); }
+    if (this.swingT >= 0) {
+      this.swingT += dt; const B = this.sweet(), d = Math.hypot(m.x - B.x, m.y - B.y);
+      if (d < this.dmin) { this.dmin = d; this.hitPos = { x: m.x, y: m.y }; }
+      if (this.swingT >= 0.22) { const q = clamp(1 - this.dmin / BUNNY.rq, 0, 1); this.swingT = -2; if (q > 0.1) { this.launch(q); return; } this.say('Raté !', '#cfd8ff'); }
+    }
+    if (m.y + 40 >= FLOOR_Y) { m.y = FLOOR_Y - 40; if (this.swingT < 0) this.launch(0); }          // au sol : raté (sauf si le coup est encore en cours)
+  }
+  updateFly(dt, act) {
+    const m = this.m; this.flyT += dt;
+    if (act && this.boosts > 0) { this.boosts--; m.vx = Math.min(1700, m.vx + 190); m.vy = Math.min(m.vy, 0) - 260; burst(this.parts, m.x - 10, m.y + 20, 16, ['#ff8a3c', '#ffd23f', '#fff'], 240); Sfx.play('spring'); }
+    for (let s = 0; s < 2; s++) {
+      const h = dt / 2; m.vy += BUNNY.g * h; m.vx = Math.min(1800, m.vx * (1 - 0.2 * h)); m.x += m.vx * h; m.y += m.vy * h;      // frottement de l'air + vitesse limitée
+      if (m.y + 40 >= FLOOR_Y) {
+        m.y = FLOOR_Y - 40;
+        if (m.vy > 200) {
+          const k = Math.round((m.x - 1000) / 1150);
+          if (k >= 0 && Math.abs(m.x - springAt(k)) < 44) { m.vy = -1050; m.vx += 200; this.say('BOING !', '#7dffa0'); Sfx.play('spring'); }
+          else { m.vy = -m.vy * 0.5; m.vx *= 0.8; dust(this.parts, m.x, FLOOR_Y, 8, 0); Sfx.play('stomp'); }
+        } else { m.vy = 0; m.vx *= 1 - 1.8 * h; }
+      }
+    }
+    for (let k = Math.floor((m.x - 650) / 520) - 1; k <= Math.floor((m.x - 650) / 520) + 1; k++) {            // ballons : poussée vers l'avant
+      if (k < 0 || this.popped.has(k)) continue; const b = balloonAt(k);
+      if (Math.hypot(m.x - b.x, m.y - b.y) < 46) { this.popped.add(k); m.vx += 280; m.vy = Math.min(m.vy, 0) - 380; burst(this.parts, b.x, b.y, 14, ['#ff5a8a', '#fff', '#ffd23f'], 260); Sfx.play('coin'); }
+    }
+    const air = m.y + 40 < FLOOR_Y - 1; m.rot += air ? 8 * dt * (m.vx >= 0 ? 1 : -1) : m.vx * dt / 38; m.state = air ? 'hurt' : 'jump'; this.maxX = Math.max(this.maxX, m.x);
+    if (!air && Math.abs(m.vx) < 14 && Math.abs(m.vy) < 30) this.stillT += dt; else this.stillT = 0;
+    if (this.stillT > 0.5 || this.flyT > 45) this.endThrow();
+  }
+  batAngle() {
+    if (this.phase === 'fall' && this.swingT >= 0) return lerp(this.theta + 1.5, this.theta - 0.4, ease(clamp(this.swingT / 0.2, 0, 1)));
+    if (this.swingT === -2 || this.phase === 'fly' || this.phase === 'result' || this.phase === 'over') return this.theta - 0.4;
+    return this.phase === 'aim' ? this.theta : this.theta + 1.5 * (this.phase === 'fall' ? 1 : 0.35);
+  }
+  draw(ctx) {
+    const cx = Math.round(this.cam.x), cy = Math.round(this.cam.y), sh = this.shake > 0 ? rnd(-4, 4) : 0;
+    ctx.save(); ctx.translate(sh, sh);
+    drawBackground(ctx, 'ville', cx, 0, this.t);
+    const gy = FLOOR_Y - cy, off = ((cx % TILE) + TILE) % TILE;                              // sol qui défile
+    for (let x = -off; x < W; x += TILE) for (let y = gy, r = 0; y < H; y += TILE, r++) drawTile(ctx, 'ville', '#', x, y, r === 0, Math.floor((cx + x) / TILE), r);
+    ctx.save(); ctx.translate(-cx, -cy);
+    rect(ctx, -520, 70, 420, FLOOR_Y - 70, '#8c6a5a'); rect(ctx, -520, 70, 420, 12, '#5e4439'); rect(ctx, -540, 62, 460, 12, '#4a352c');   // l'immeuble d'où saute Matthieu
+    for (let r = 0; r < 14; r++) for (let c = 0; c < 8; c++) rect(ctx, -496 + c * 50, 100 + r * 28, 26, 16, hash(r * 9 + c) > 0.35 ? '#ffe9a8' : '#4a3a44');
+    for (let k = 1; k < 40; k++) { const x = k * 50 * BUNNY.pxPerM; rect(ctx, x - 2, FLOOR_Y - 70, 4, 70, '#fff'); rr(ctx, x - 30, FLOOR_Y - 110, 60, 28, 6, '#fff', '#c0392b', 3); txt(ctx, (k * 50) + ' m', x, FLOOR_Y - 90, 14, '#c0392b', 'center'); }
+    if (this.best0 > 0) { const x = this.best0 * BUNNY.pxPerM; rect(ctx, x - 2, FLOOR_Y - 130, 4, 130, '#ffd23f'); poly(ctx, [[x, FLOOR_Y - 130], [x + 46, FLOOR_Y - 116], [x, FLOOR_Y - 102]], '#ffd23f'); txt(ctx, 'RECORD', x + 4, FLOOR_Y - 138, 13, '#a07800'); }
+    for (let k = Math.max(0, Math.floor((cx - 650) / 520)); k < Math.floor((cx + W - 650) / 520) + 2; k++) { if (!this.popped.has(k)) { const b = balloonAt(k); drawBalloon(ctx, b.x, b.y, this.t, ['#ff5a8a', '#4fd8ff', '#ffd23f', '#7dff7d'][k % 4]); } }
+    for (let k = 0; k < 40; k++) { const x = springAt(k); if (x > cx - 60 && x < cx + W + 60) drawSpring(ctx, x, FLOOR_Y, 0); }
+    // Stephan, la batte et le cercle de frappe
+    const B = this.sweet(), ang = this.batAngle(), show = this.phase === 'aim' || this.phase === 'wait' || (this.phase === 'fall' && !this.swung);
+    if (show) { const pulse = 1 + Math.sin(this.t * 8) * 0.08; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3; ctx.setLineDash && ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.arc(B.x, B.y, 30 * pulse, 0, 6.2832); ctx.stroke(); ctx.setLineDash && ctx.setLineDash([]); circ(ctx, B.x, B.y, 6, '#ffd23f'); }
+    if (this.phase === 'aim') { for (let i = 1; i <= 4; i++) circ(ctx, BUNNY.hand[0] + Math.cos(this.theta) * (40 + i * 52), BUNNY.hand[1] - Math.sin(this.theta) * (40 + i * 52), 3.5, 'rgba(255,255,255,.7)'); txt(ctx, Math.round(this.theta * 57.3) + '°', B.x + 30, B.y - 28, 20, '#fff'); }
+    drawCharacter(ctx, CHARS.hero, 0, FLOOR_Y, { facing: 1, state: 'idle', t: this.t, rot: this.swingT >= 0 ? -0.08 : 0 });
+    drawBat(ctx, BUNNY.hand[0], BUNNY.hand[1], ang, 96);
+    // Matthieu
+    const m = this.m, lying = this.phase === 'result' || this.phase === 'over';
+    drawCharacter(ctx, CHARS.lapin, m.x, m.y + 40 + (lying ? 18 : 0), { facing: 1, state: this.phase === 'wait' || this.phase === 'aim' ? 'wave' : m.state, t: this.t, rot: m.rot, emote: lying && this.dists.length ? '@_@' : null, mood: this.phase === 'fly' ? 'surprised' : lying ? 'sad' : 'happy' });
+    if (this.phase === 'fly' && this.boosts < 3 && this.flyT < 3) { /* traînée de la dernière carotte */ }
+    drawParticles(ctx, this.parts);
+    ctx.restore(); ctx.restore();
+    this.drawHUD(ctx);
+  }
+  drawHUD(ctx) {
+    const m = this.m, d = Math.floor(Math.max(0, this.phase === 'fly' ? m.x : this.maxX) / BUNNY.pxPerM);
+    rr(ctx, 12, 10, 250, 46, 12, 'rgba(14,18,34,.82)', 'rgba(143,166,255,.6)', 1.5); txt(ctx, 'Lancer ' + (this.cur + 1) + '/' + BUNNY.tries, 26, 30, 17, '#ffe08a'); txt(ctx, 'Record : ' + Math.max(this.best0, this.bestThrow) + ' m', 26, 50, 15, '#cfd8ff');
+    if (this.phase === 'fly' || this.phase === 'result') { rr(ctx, W / 2 - 90, 10, 180, 50, 14, 'rgba(14,18,34,.85)', '#ffd23f', 2); txt(ctx, d + ' m', W / 2, 46, 34, '#ffd23f', 'center'); }
+    if (this.phase === 'fly' || this.phase === 'fall') { rr(ctx, W - 150, 10, 138, 40, 12, 'rgba(14,18,34,.82)'); for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < this.boosts ? 1 : 0.2; drawItem(ctx, 'carotte', W - 120 + i * 40, 31, 0.85, this.t, i); ctx.globalAlpha = 1; } }
+    if (this.msgT > 0) { ctx.globalAlpha = clamp(this.msgT / 0.4, 0, 1); txt(ctx, this.msg.text, W / 2, 170, 44, this.msg.color, 'center'); ctx.globalAlpha = 1; }
+    const hint = { aim: 'Appuie pour fixer l\'angle de la batte', wait: 'Prépare-toi…', fall: 'Frappe quand Matthieu passe dans le cercle !', fly: 'Appuie pour booster avec une carotte (' + this.boosts + ')' }[this.phase];
+    if (hint) { rr(ctx, W / 2 - 280, H - 44, 560, 32, 14, 'rgba(14,18,34,.8)'); txt(ctx, (Device.touch ? hint.replace('Appuie', 'Touche') : hint), W / 2, H - 22, 17, '#fff', 'center'); }
+    if (this.phase === 'result') {
+      rr(ctx, W / 2 - 260, 120, 520, 170, 18, 'rgba(14,18,34,.94)', '#ffd23f', 3); txt(ctx, 'Lancer ' + (this.cur + 1) + ' : ' + this.lastDist + ' m', W / 2, 180, 40, '#ffd23f', 'center');
+      txt(ctx, this.newRecord ? 'Nouveau record !' : this.lastDist > 150 ? 'Quel envol !' : this.lastDist < 20 ? 'Matthieu n\'a pas décollé…' : 'Pas mal !', W / 2, 220, 22, this.newRecord ? '#7dffa0' : '#cfd8ff', 'center');
+      if (this.pt > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, Device.touch ? 'Touche pour continuer' : 'Espace / Entrée pour continuer', W / 2, 262, 17, '#8fa6ff', 'center');
+    }
+    if (this.phase === 'over') {
+      rr(ctx, W / 2 - 280, 90, 560, 230, 18, 'rgba(14,18,34,.95)', '#ffd23f', 3); txt(ctx, this.recordNow ? 'Nouveau record !' : 'Fin des lancers', W / 2, 140, 36, this.recordNow ? '#7dffa0' : '#ffd23f', 'center');
+      this.dists.forEach((v, i) => txt(ctx, 'Lancer ' + (i + 1) + ' : ' + v + ' m', W / 2, 184 + i * 28, 21, v === this.bestThrow ? '#ffe08a' : '#fff', 'center'));
+      txt(ctx, 'Meilleur : ' + this.bestThrow + ' m', W / 2, 290, 22, '#ffd23f', 'center');
+      if (this.pt > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, Device.touch ? 'Touche pour revenir au menu' : 'Entrée pour revenir au menu', W / 2, 312, 15, '#8fa6ff', 'center');
+    }
+  }
+}
+
+/* ============================================================
+   MiniGameSelect : menu des mini-jeux (liste MINIGAMES dans content.js)
+   ============================================================ */
+function startMiniGame(game, def) {
+  const back = () => game.go(new MiniGameSelect(game));
+  game.go(def.type === 'broom' ? new BroomScene(game, def, back, back) : def.type === 'aura' ? new AuraScene(game, def, back, back) : def.type === 'bunny' ? new BunnyScene(game, def, back, back) : new DanceScene(game, def, back, back));
+}
+class MiniGameSelect {
+  constructor(game) { this.game = game; }
+  get touchMode() { return 'back'; }
+  enter() { this.ownTap = true; this.sel = 0; this.t = 0; }
+  update(dt) {
+    this.t += dt;
+    const n = MINIGAMES.length;
+    if (Input.menuUp()) { this.sel = (this.sel + n - 1) % n; Sfx.play('blip'); }
+    if (Input.menuDown()) { this.sel = (this.sel + 1) % n; Sfx.play('blip'); }
+    if (Input.tap) {
+      const i = Math.floor((Input.tap.y - 104) / 100);
+      if (Input.tap.x > 60 && Input.tap.x < 900 && i >= 0 && i < n && Input.tap.y - 104 - i * 100 < 88) { if (this.sel === i) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[i].def); return; } this.sel = i; Sfx.play('blip'); }
+    }
+    if (Input.confirm()) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[this.sel].def); return; }
+    if (Input.back()) this.game.go(new TitleScene(this.game));
+  }
+  draw(ctx) {
+    drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
+    ctx.fillStyle = 'rgba(8,6,24,.72)'; ctx.fillRect(0, 0, W, H);
+    txt(ctx, 'Mini-jeux', 60, 80, 40, '#ffd23f');
+    MINIGAMES.forEach((g, i) => {
+      const y = 104 + i * 100, on = i === this.sel, best = g.best ? Best.get(g.best) : 0;
+      rr(ctx, 60, y, 840, 88, 16, on ? '#ffd23f' : 'rgba(255,255,255,.12)', on ? '#fff' : 'rgba(255,255,255,.3)', 2);
+      if (g.icon === 'bunny') { drawCharacter(ctx, CHARS.hero, 120, y + 82, { facing: 1, state: 'idle', t: this.t }); drawCharacter(ctx, CHARS.lapin, 215, y + 70 - (on ? Math.abs(Math.sin(this.t * 5)) * 16 : 0), { facing: 1, state: 'jump', t: this.t, rot: on ? this.t * 4 : 0 }); }
+      else if (g.icon === 'duel') { drawCharacter(ctx, CHARS.hero, 120, y + 82, { facing: 1, state: on ? 'cheer' : 'idle', t: this.t }); drawCharacter(ctx, CHARS.arno, 215, y + 82, { facing: -1, state: on ? 'cheer' : 'idle', t: this.t + 1 }); }
+      else for (let l = 0; l < 4; l++) drawArrow(ctx, 120 + l * 52, y + 44 + Math.sin(this.t * 4 + l) * (on ? 4 : 0), l, DANCE_LANES.color[l], 19, on ? '#2a1a3e' : '#fff');
+      txt(ctx, g.title, 350, y + 38, 30, on ? '#2a1a3e' : '#fff');
+      txt(ctx, g.desc, 350, y + 68, 16, on ? '#4a3a5e' : '#cfd8ff');
+      if (best) txt(ctx, (g.bestLabel || 'Record') + ' : ' + best + (g.bestUnit || ''), 880, y + 38, 20, on ? '#2a1a3e' : '#ffe08a', 'right');
+    });
+    txt(ctx, Device.touch ? 'Touche un mini-jeu, puis touche-le encore pour jouer' : '↑ ↓ : choisir   ·   Entrée : jouer   ·   Échap : retour', W / 2, H - 20, 15, '#fff', 'center');
   }
 }
 

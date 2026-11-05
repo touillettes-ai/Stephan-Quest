@@ -5,6 +5,8 @@
 const TOUCH_LAYOUTS = {
   move:  { left: [['◀', 'ArrowLeft'], ['▶', 'ArrowRight']], right: [['⤒', 'Space', 'big']], top: [['⏸', 'Escape', 'pill']] },
   broom: { left: [['◀', 'ArrowLeft'], ['▶', 'ArrowRight']], right: [['BALAI', 'KeyE', 'act big'], ['⤒', 'Space']], top: [['⏸', 'Escape', 'pill']] },
+  one:   { right: [['FRAPPE', 'Space', 'act big']], top: [['Quitter', 'Escape', 'pill']] },
+  dancefree: { row: [['◀', 'ArrowLeft', 'sq'], ['▼', 'ArrowDown', 'sq'], ['▲', 'ArrowUp', 'sq'], ['▶', 'ArrowRight', 'sq']], top: [['Quitter', 'Escape', 'pill']] },
   dance: { row: [['◀', 'ArrowLeft', 'sq'], ['▼', 'ArrowDown', 'sq'], ['▲', 'ArrowUp', 'sq'], ['▶', 'ArrowRight', 'sq']] },
   cut:   { br: [['Passer ⏭', 'Escape', 'pill']] },
   back:  { bl: [['← Retour', 'Escape', 'pill']] },

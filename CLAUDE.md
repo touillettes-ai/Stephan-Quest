@@ -79,6 +79,8 @@ Physique (`PHYS` dans engine.js) : vitesse 230, saut 640, gravité 1800, ressort
 
 **Jeu de danse** (`ARENAS.danse`, `type:'dance'`, classe `DanceScene`) : flèches ←↓↑→ (ou QZSD) synchronisées avec `MUSIC.dancing` (js/music.js, **généré** depuis un fichier MIDI par un script : extrait de 45 s, notes jouées par un petit synthé WebAudio, flèches = notes de la mélodie). Réglages dans `DANCE` (engine.js) : 1 point par flèche, +10 toutes les 10 flèches réussies. Test visuel : `test/shot.html#dance/danse/14`.
 
+**Mini-jeux** (menu principal → « Mini-jeux », liste `MINIGAMES` dans content.js ; chaque entrée pointe vers une arène `ARENAS.*`) : « Danse » (chanson entière `MUSIC.full`, record gardé via `Best`) et « Battle d'aura » (`AuraScene`, `type:'aura'`, `mode:'cpu'` : Stephan vs Arno, 15 flèches chacun leur tour, 3 manches gagnées ; l'ordinateur joue Arno avec une précision de 50 à 95 %) ; musique tirée au hasard entre « Forgot About Dre » (Dr. Dre) et « Gangsta's Paradise » (Coolio) : les flèches sont posées sur les vrais coups de grosse caisse / caisse claire / clap du MIDI (`MUSIC.dre/gangsta`, champ `hits`). Test visuel : `test/shot.html#aura/aura/9` (bot parfait). Égalité : départage aux coups parfaits, sinon « mort subite » (5 flèches chacun, répétée jusqu'à un vainqueur). « Lapin Sport » (`BunnyScene`, `type:'bunny'`, façon Yeti Sport) : angle de batte → frappe au bon moment sur Matthieu qui saute d'un immeuble → vol avec carottes (boosts), ballons, trampolines ; 3 lancers, record en mètres ; test visuel `test/shot.html#bunny/lapin/6`.
+
 ## Créer une cinématique
 Dans `CUTS`, un script générateur ; `c` = API :
 ```js

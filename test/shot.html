@@ -17,6 +17,14 @@ else if (kind === 'level') {
   for (let i = 0; i < 45; i++) step(1 / 30, i === 30 ? { Space: true } : {});
   Input.down = {}; sc.p.inv = 0; if (px) sc.t = 6;
 }
+else if (kind === 'bunny') {
+  sc = new BunnyScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 8; for (let i = 0; i < T * 30; i++) { const keys = {}; if (sc.phase === 'aim' && Math.abs(sc.theta - 0.8) < 0.06) keys.Space = true; else if (sc.phase === 'fall' && !sc.swung) { const B = sc.sweet(); if (Math.hypot(sc.m.x - B.x, sc.m.y - B.y) < 40) keys.Space = true; } step(1 / 30, keys); }
+}
+else if (kind === 'aura') {
+  sc = new AuraScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 12; for (let i = 0; i < T * 30; i++) { const keys = {}; if (sc.phase === 'turn' && (sc.turn === 0 || !sc.cpu)) for (const a of sc.arrows) if (a.state === 0 && Math.abs(a.t - sc.songTime()) < 1 / 60) keys[['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'][a.lane]] = true; step(1 / 30, keys); }
+}
 else if (kind === 'dance') {
   sc = new DanceScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
   const T = +param || 8; for (let i = 0; i < T * 30; i++) step(1 / 30, {});

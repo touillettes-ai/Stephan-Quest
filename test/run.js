@@ -8,7 +8,7 @@ function mockCtx() {
   return new Proxy(target, { get(t, k) { return k in t ? t[k] : () => {}; }, set(t, k, v) { t[k] = v; return true; } });
 }
 const G = new Function('window', 'document', 'requestAnimationFrame', src + `
-  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
+  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, AuraScene, BunnyScene, MiniGameSelect, MINIGAMES, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
 )({ addEventListener() {} }, {}, () => {});
 const { Input } = G;
 let failures = 0;
@@ -112,10 +112,59 @@ console.log('Parcours complet');
 /* ---------- 3b. Arènes « coup de balai » ---------- */
 console.log('Arènes');
 for (const [name, ar] of Object.entries(G.ARENAS)) {
+  if (ar.type === 'bunny') {
+    const ctx = mockCtx(), sb = new G.BunnyScene(fakeGame, ar, () => {}, () => {}); sb.enter();
+    try {
+      for (let i = 0; i < 60 * 300 && sb.phase !== 'over'; i++) {                  // un joueur adroit : angle ~46°, frappe au bon moment, booste en descente
+        const keys = {};
+        if (sb.phase === 'aim' && Math.abs(sb.theta - 0.8) < 0.03) keys.Space = true;
+        else if (sb.phase === 'fall' && !sb.swung) { const B = sb.sweet(); if (Math.hypot(sb.m.x - B.x, sb.m.y - B.y) < 40) keys.Space = true; }
+        else if (sb.phase === 'fly' && sb.flyT > 1.0 && sb.boosts > 0 && sb.m.vy > 0) keys.Space = true;
+        else if (sb.phase === 'result') keys.Space = true;
+        frame(sb, 1 / 60, keys); if (i % 60 === 0) sb.draw(ctx);
+      }
+    } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+    ok(sb.phase === 'over' && sb.dists.length === 3, name + ' : les 3 lancers ne se terminent pas'); ok(sb.dists.every(d => d > 40), name + ' : un bon joueur doit envoyer le lapin au-delà de 40 m (' + sb.dists.join(', ') + ')');
+    const sm = new G.BunnyScene(fakeGame, ar, () => {}, () => {}); sm.enter();                 // pas de frappe : le lapin tombe et ne va pas loin
+    try { for (let i = 0; i < 60 * 60 && sm.phase !== 'result'; i++) frame(sm, 1 / 60, sm.phase === 'aim' && i > 30 ? { Space: true } : {}); } catch (e) { ok(false, name + ' : exception (raté) → ' + e.message); }
+    ok(sm.phase === 'result' && sm.lastDist < 40, name + ' : un lancer raté doit finir près de Stephan (' + sm.lastDist + ' m)'); sm.draw(ctx);
+    let fin = false; const so = new G.BunnyScene(fakeGame, ar, () => { fin = true; }, () => {}); so.enter(); so.dists = [10, 20]; so.cur = 2; so.phase = 'result'; so.next();
+    for (let i = 0; i < 100; i++) frame(so, 1 / 60, i === 90 ? { Space: true } : {}); ok(fin, name + ' : onDone non appelé'); so.draw(ctx);
+    console.log('  ' + name.padEnd(12) + '✓ 3 lancers : ' + sb.dists.join(' m, ') + ' m');
+    continue;
+  }
+  if (ar.type === 'aura') {
+    const ctx = mockCtx(), keysOf = ['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'];
+    const sa = new G.AuraScene(fakeGame, ar, () => {}, () => {}); sa.enter(); let frames = 0;
+    try {
+      for (let i = 0; i < 60 * 400 && !sa.over; i++, frames++) {                // Stephan parfait ; en duo, Arno rate une flèche sur trois
+        const st = sa.songTime(), keys = {};
+        if (sa.phase === 'turn') for (const a of sa.arrows) if (a.state === 0 && Math.abs(a.t - st) < 1 / 120 && (sa.turn === 0 || (!sa.cpu && a.lane !== 1))) keys[keysOf[a.lane]] = true;
+        frame(sa, 1 / 60, keys); if (i % 90 === 0) sa.draw(ctx);
+      }
+    } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+    ok(sa.over && sa.winner === 0, name + ' : un Stephan parfait doit gagner le match (fini=' + sa.over + ', vainqueur=' + sa.winner + ')'); sa.draw(ctx);
+    for (const key of ar.songs) {                                                 // les flèches tombent sur de vrais temps forts de la chanson, à la suite, au rythme du morceau
+      const sy = new G.AuraScene(fakeGame, Object.assign({}, ar, { songs: [key] }), () => {}, () => {}); sy.enter(); const st0 = sy.s0 + 1.4; sy.startTurn(0, st0);
+      const gaps = sy.arrows.slice(1).map((a, i) => a.t - sy.arrows[i].t);
+      ok(sy.arrows.length === 15 && sy.arrows.every(a => sy.song.hits.includes(a.t)), name + ' / ' + key + ' : les flèches ne sont pas posées sur les temps forts');
+      ok(sy.arrows[0].t >= st0 + 1.4 && Math.min.apply(null, gaps) >= 0.26 && Math.max.apply(null, gaps) < 3, name + ' / ' + key + ' : écarts de flèches injouables (' + Math.min.apply(null, gaps).toFixed(2) + ' à ' + Math.max.apply(null, gaps).toFixed(2) + ' s)');
+      ok(sy.song.hits.length > 200 && sy.song.tracks.some(t => t.n.length > 100), name + ' / ' + key + ' : chanson incomplète');
+    }
+    const tie = new G.AuraScene(fakeGame, ar, () => {}, () => {}); tie.enter(); tie.score = [{ hits: 9, perf: 4 }, { hits: 9, perf: 4 }]; tie.resolveRound();
+    ok(tie.roundWinner === -1 && tie.p[0].wins === 0 && tie.p[1].wins === 0 && tie.sudden, name + ' : une égalité ne doit donner de point à personne et lancer la mort subite');
+    tie.pt = 99; frame(tie, 1 / 60, {}); ok(tie.phase === 'turn' && tie.arrows.length === 5 && tie.round === 1, name + ' : la mort subite doit durer 5 flèches dans la même manche');
+    tie.score = [{ hits: 2, perf: 1 }, { hits: 2, perf: 1 }]; tie.resolveRound(); ok(tie.roundWinner === -1 && tie.sudden, name + ' : une nouvelle égalité relance la mort subite');
+    tie.score = [{ hits: 9, perf: 3 }, { hits: 9, perf: 4 }]; tie.resolveRound(); ok(tie.roundWinner === 1 && !tie.sudden, name + ' : départage aux coups parfaits');
+    let fin = false; const se = new G.AuraScene(fakeGame, ar, () => { fin = true; }, () => {}); se.enter(); se.p[1].wins = 3; se.endMatch();
+    for (let i = 0; i < 100; i++) frame(se, 1 / 60, i === 90 ? { Enter: true } : {}); ok(fin, name + ' : onDone non appelé'); se.draw(ctx);
+    console.log('  ' + name.padEnd(12) + '✓ match simulé en ' + Math.round(frames / 60) + ' s, ' + sa.p[0].wins + '-' + sa.p[1].wins);
+    continue;
+  }
   if (ar.type === 'dance') {
     const ctx = mockCtx(), sd = new G.DanceScene(fakeGame, ar, () => {}, () => {}); sd.enter(); const total = sd.arrows.length;
     try {
-      for (let i = 0; i < 60 * 52 && !sd.done; i++) {                 // un joueur parfait : appuie pile sur chaque flèche
+      for (let i = 0; i < 60 * (sd.song.length + 6) && !sd.done; i++) {                 // un joueur parfait : appuie pile sur chaque flèche
         const st = sd.songTime(), keys = {};
         for (const a of sd.arrows) if (a.state === 0 && Math.abs(a.t - st) < 1 / 120) keys[['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'][a.lane]] = true;
         frame(sd, 1 / 60, keys); if (i % 40 === 0) sd.draw(ctx);
@@ -165,6 +214,18 @@ console.log('Tactile');
   console.log('  ✓ modes tactiles par scène, taps des menus');
 }
 
+/* ---------- 3d. Menu des mini-jeux ---------- */
+console.log('Mini-jeux');
+{
+  const g = { go(sc) { g.last = sc; }, ctx: mockCtx() };
+  ok(G.MINIGAMES.length >= 1 && G.MINIGAMES.every(m => m.def && (!m.def.song || G.MUSIC[m.def.song])), 'MINIGAMES : musique introuvable');
+  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 254 + 100 }; ti.update(1 / 60); Input.tap = null;
+  ok(g.last instanceof G.MiniGameSelect, 'Titre : le bouton « Mini-jeux » n\'ouvre pas le menu');
+  const mg = new G.MiniGameSelect(g); mg.enter(); g.last = null; Input.tap = { x: 300, y: 150 }; mg.update(1 / 60); Input.tap = null; ok(g.last instanceof G.DanceScene, 'Mini-jeux : le tap sur le mini-jeu sélectionné ne lance pas la danse');
+  g.last.enter(); ok(g.last.touchMode === 'dancefree' && g.last.song.length > 200, 'Danse (mini-jeu) : chanson entière attendue');
+  console.log('  ✓ menu, taps, chanson entière (' + g.last.arrows.length + ' flèches, ' + Math.round(g.last.song.length) + ' s)');
+}
+
 /* ---------- 4. Écrans & dessins ---------- */
 console.log('Décors / personnages');
 {
@@ -175,7 +236,7 @@ console.log('Décors / personnages');
     for (const k of G.ITEM_KINDS) G.drawItem(ctx, k, 50, 50, 1, 1, 2);
     for (const k of Object.keys(G.HAZARDS)) { G.drawHazard(ctx, k, 100, 400, 1, 1, false); G.drawHazard(ctx, k, 100, 400, 1, -1, true); }
     for (const k of ['desk', 'chair', 'dchair', 'table', 'whiteboard', 'banner', 'cake', 'stool', 'counter', 'door', 'seat', 'maki', 'ecran', 'balai', 'tascarottes', 'scene', 'foule', 'longtable']) G.drawProp(ctx, { kind: k, x: 400, y: 480, pieces: 3, check: '#c00', candle: true }, 1);
-    const ts = [new G.TitleScene(fakeGame), new G.ChapterSelect(fakeGame), new G.ChapterCard(fakeGame, G.STORY[0], () => {}), new G.CreditsScene(fakeGame)];
+    const ts = [new G.TitleScene(fakeGame), new G.MiniGameSelect(fakeGame), new G.ChapterSelect(fakeGame), new G.ChapterCard(fakeGame, G.STORY[0], () => {}), new G.CreditsScene(fakeGame)];
     for (const s of ts) { s.enter(); for (let i = 0; i < 30; i++) frame(s, 1 / 30, {}); s.draw(ctx); }
     console.log('  ✓ tous les dessins s\'exécutent sans erreur');
   } catch (e) { ok(false, 'dessins : ' + e.stack.split('\n').slice(0, 3).join(' | ')); }

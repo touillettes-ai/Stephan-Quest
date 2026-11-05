@@ -24,6 +24,12 @@ const Device = {
   },
 };
 
+/* Meilleurs scores des mini-jeux (gardés dans le navigateur ; sans effet si le stockage est indisponible) */
+const Best = {
+  get(k) { try { return +localStorage.getItem('b15.' + k) || 0; } catch (e) { return 0; } },
+  set(k, v) { try { localStorage.setItem('b15.' + k, String(v)); } catch (e) { /* pas grave */ } },
+};
+
 const Input = {
   down: {}, pressed: {}, tap: null,
   init() {
