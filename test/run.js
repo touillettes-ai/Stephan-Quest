@@ -298,7 +298,7 @@ console.log('Décors / personnages');
     for (const ch of Object.values(G.CHARS)) for (const st of ['idle', 'walk', 'jump', 'fall', 'wave', 'cheer', 'sit', 'hurt']) G.drawCharacter(ctx, ch, 100, 400, { state: st, t: 1.2, facing: -1, talking: true, emote: '!' });
     for (const k of G.ITEM_KINDS) G.drawItem(ctx, k, 50, 50, 1, 1, 2);
     for (const k of Object.keys(G.HAZARDS)) { G.drawHazard(ctx, k, 100, 400, 1, 1, false); G.drawHazard(ctx, k, 100, 400, 1, -1, true); }
-    for (const k of ['desk', 'chair', 'dchair', 'table', 'whiteboard', 'banner', 'cake', 'stool', 'counter', 'door', 'seat', 'maki', 'ecran', 'balai', 'tascarottes', 'scene', 'foule', 'longtable', 'panier', 'basket']) G.drawProp(ctx, { kind: k, x: 400, y: 480, pieces: 3, check: '#c00', candle: true }, 1);
+    for (const k of ['desk', 'chair', 'dchair', 'table', 'whiteboard', 'banner', 'cake', 'stool', 'counter', 'door', 'seat', 'maki', 'ecran', 'balai', 'tascarottes', 'scene', 'foule', 'longtable', 'panier', 'basket', 'vitrecassee']) G.drawProp(ctx, { kind: k, x: 400, y: 480, pieces: 3, check: '#c00', candle: true }, 1);
     const ts = [new G.TitleScene(fakeGame), new G.MiniGameSelect(fakeGame), new G.ChapterSelect(fakeGame), new G.ChapterCard(fakeGame, G.STORY[0], () => {}), new G.CreditsScene(fakeGame)];
     for (const s of ts) { s.enter(); for (let i = 0; i < 30; i++) frame(s, 1 / 30, {}); s.draw(ctx); }
     console.log('  ✓ tous les dessins s\'exécutent sans erreur');

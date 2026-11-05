@@ -331,6 +331,61 @@ CUTS.j15_train = {
   },
 };
 
+CUTS.j15_train_bastien = {
+  type: 'cutscene', bg: 'train',
+  script: function* (c) {
+    const GLASS = ['#d9ecff', '#ffffff', '#9ac8f0', '#bfe0f8'];
+    // un bond avec une trajectoire en arc ; rot = inclinaison finale (radians)
+    const arc = (k, x2, y2, dur, h, rot) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = lerp(y0, y2, p) - Math.sin(p * Math.PI) * h; a.rot = (rot || 0) * p; return p >= 1; } }; };
+    c.add('bastien', CHARS.bastien, 538, { face: -1, state: 'idle' });
+    c.prop('seat', 560, FLOOR_Y, { front: true });                      // le siège cache la moitié de Bastien
+    c.add('hero', CHARS.hero, -60, { state: 'walk' });
+    yield c.caption('Un peu plus loin dans le wagon…', 2.2);
+    yield c.walk('hero', 300, 120);
+    c.face('hero', 1); c.emote('hero', '?', 1.2);
+    yield c.wait(0.9);
+    c.emote('hero', '!', 1);
+    c.mood('hero', 'angry');
+    yield c.say('hero', "Qu'est-ce que tu fous là, Padawan ! Tu vas être en retard pour le Daily, bordel !", { mood: 'angry' });
+    c.emote('bastien', 'Chut', 2.4);
+    yield c.say('bastien', 'Chuuuut ! Je fais un cache-cache avec Olivier.');
+    c.mood('hero', undefined);
+    for (const d of [-1, 1, -1, 1, 1]) { c.face('hero', d); c.emote('hero', '?', 0.6); yield c.wait(0.6); }      // Stephan cherche Olivier partout
+    c.face('hero', 1);
+    yield c.wait(0.5);
+    // Olivier traverse la vitre en volant
+    c.sfx('hurt'); c.sfx('stomp'); c.shake(0.6);
+    c.prop('vitrecassee', 510, 160);
+    c.burst(510, 160, 60, GLASS, 420);
+    c.add('olivier', CHARS.olivier, 510, { y: 175, face: -1, state: 'jump' });
+    const hop = (() => { const a = c.actors.hero, x0 = a.x; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / 0.5); a.x = lerp(x0, x0 - 75, p); a.y = FLOOR_Y - Math.sin(p * Math.PI) * 46; a.state = p < 1 ? 'jump' : 'idle'; if (p >= 1) { a.y = FLOOR_Y; return true; } return false; } }; })();
+    c.emote('hero', '!!', 1.4); c.mood('hero', 'surprised');
+    yield [arc('olivier', 410, FLOOR_Y, 0.85, 30, -6.2832), hop];
+    c.actors.olivier.rot = 0; c.actors.olivier.state = 'idle'; c.sfx('stomp'); c.burst(410, FLOOR_Y, 10, ['#e8e2d4'], 160);
+    yield c.wait(0.5);
+    c.face('olivier', -1); c.face('hero', 1);
+    yield c.say('olivier', 'Salut Papi.', { mood: 'laugh' });
+    c.mood('hero', undefined);
+    // Olivier rejoint Bastien et l'attrape
+    yield c.walk('olivier', 492, 200);
+    c.face('olivier', 1);
+    c.pose('olivier', 'cheer'); c.sfx('win');
+    yield c.say('olivier', 'TROUVÉÉÉÉÉ !', { mood: 'laugh' });
+    c.pose('olivier', 'idle'); c.emote('bastien', '!!', 1.4); c.mood('bastien', 'surprised');
+    yield c.walk('bastien', 524, 60);
+    c.face('bastien', 1);
+    yield c.say('olivier', 'Je vais te livrer au Delivery !', { mood: 'angry' });
+    // ils s'envolent tous les deux
+    c.pose('olivier', 'jump'); c.pose('bastien', 'jump'); c.mood('bastien', 'laugh'); c.mood('olivier', 'laugh');
+    yield c.say('olivier', "VERS L'INFINI ET AU DELIVERY !", { name: 'Olivier et Bastien', mood: 'laugh' });
+    c.sfx('jump');
+    yield [arc('olivier', 1160, -190, 1.7, 40, -1.05), arc('bastien', 1230, -230, 1.7, 40, -1.05)];
+    c.remove('olivier'); c.remove('bastien');
+    c.pose('hero', 'idle'); c.face('hero', 1); c.emote('hero', '…', 2);
+    yield c.wait(1.4);
+  },
+};
+
 CUTS.j15_train_outro = {
   type: 'cutscene', bg: 'train',
   script: function* (c) {
@@ -872,7 +927,7 @@ CUTS.casting = {
    HISTOIRE : l'ordre des chapitres, cinématiques et niveaux
    ============================================================ */
 const STORY = [
-  { day: 'J-15', title: 'En route vers le GTAR', steps: [CUTS.j15_train, LEVELS.train, CUTS.j15_train_outro] },
+  { day: 'J-15', title: 'En route vers le GTAR', steps: [CUTS.j15_train, LEVELS.train, CUTS.j15_train_bastien, CUTS.j15_train_outro] },
   { day: 'J-14', title: 'Le logigramme',        steps: [CUTS.j14_bureau, LEVELS.logigramme, CUTS.j15_outro] },
   { day: 'J-9',  title: 'Déjeuner japonais',  steps: [CUTS.j9_choix, CUTS.j9_japonais, LEVELS.japonais, CUTS.j9_outro] },
   { day: 'J-7',  title: 'La crise',              steps: [CUTS.j7_crise, LEVELS.crise, CUTS.j7_mozart] },

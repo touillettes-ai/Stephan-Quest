@@ -586,6 +586,12 @@ function drawProp(ctx, p, t) {
       for (const dx of [-0.38, -0.2, 0.2, 0.38]) { rr(ctx, x + w * dx - 8, y - 46, 16, 5, 1, '#fff'); } break; }
     case 'seat':  // siège de train
       rr(ctx, x - 22, y - 62, 44, 62, 8, '#2c5d9e'); rr(ctx, x - 26, y - 26, 52, 22, 6, '#3a74be'); rr(ctx, x - 14, y - 76, 28, 16, 6, '#e8edf5'); break;
+    case 'vitrecassee': {                         // fenêtre brisée (x,y = centre du trou)
+      const r = p.r || 46; ctx.fillStyle = '#bfe0f8'; ctx.beginPath();
+      for (let i = 0; i < 14; i++) { const an = i / 14 * 6.2832, rd = (i % 2 ? r * 0.55 : r) + hash(i * 3 + 1) * 10; ctx.lineTo(x + Math.cos(an) * rd, y + Math.sin(an) * rd); }
+      ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1.5;
+      for (let i = 0; i < 9; i++) { const an = i / 9 * 6.2832 + 0.2; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r * 0.8, y + Math.sin(an) * r * 0.8); ctx.lineTo(x + Math.cos(an) * (r + 26 + hash(i) * 22), y + Math.sin(an) * (r + 26 + hash(i) * 22)); ctx.stroke(); }
+      break; }
     case 'panier':                                // panier de basket sur pied, cercle tourné vers la gauche
       rect(ctx, x + 28, y - 150, 6, 150, '#7d8594'); rr(ctx, x + 22, y - 176, 7, 56, 2, '#f2f5fa', '#59637a', 2); rr(ctx, x + 24, y - 148, 5, 22, 1, 'rgba(214,64,47,.5)');
       ctx.strokeStyle = '#e0553c'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(x - 8, y - 132); ctx.lineTo(x + 22, y - 132); ctx.stroke();

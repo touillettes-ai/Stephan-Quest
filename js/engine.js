@@ -199,6 +199,7 @@ class CutScene {
       sfx(n) { Sfx.play(n); },
       confetti(n) { burst(S.parts, S.cam + W / 2, 200, n || 60, CONFETTI, 360); Sfx.play('pop'); },
       rain(n) { rain(S.parts, n || 80, CONFETTI); },
+      burst(x, y, n, colors, power) { burst(S.parts, x, y, n || 30, colors || CONFETTI, power || 360); },      // gerbe de particules à un endroit précis (éclats de verre…)
       bg(name, theme) { S.bg = name; S.theme = theme || name; },
       /* --- accessoires --- */
       prop(kind, x, y, o) { const p = Object.assign({ kind, x, y: y === undefined ? FLOOR_Y : y }, o || {}); S.props.push(p); return p; },
