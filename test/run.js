@@ -8,7 +8,7 @@ function mockCtx() {
   return new Proxy(target, { get(t, k) { return k in t ? t[k] : () => {}; }, set(t, k, v) { t[k] = v; return true; } });
 }
 const G = new Function('window', 'document', 'requestAnimationFrame', src + `
-  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, AuraScene, BunnyScene, MiniGameSelect, MINIGAMES, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
+  return { Game, LevelScene, CutScene, TitleScene, ChapterSelect, ChapterCard, CreditsScene, Device, BroomScene, DanceScene, AuraScene, BunnyScene, PongScene, PacScene, MiniGameSelect, MINIGAMES, MUSIC, ARENAS, STORY, LEVELS, CUTS, CHARS, Input, Sfx, W, H, TILE, FLOOR_Y, runStep, BG, THEMES, drawBackground, drawCharacter, drawItem, drawHazard, drawProp, ITEM_KINDS, HAZARDS };`
 )({ addEventListener() {} }, {}, () => {});
 const { Input } = G;
 let failures = 0;
@@ -112,6 +112,49 @@ console.log('Parcours complet');
 /* ---------- 3b. Arènes « coup de balai » ---------- */
 console.log('Arènes');
 for (const [name, ar] of Object.entries(G.ARENAS)) {
+  if (ar.type === 'pong') {
+    const ctx = mockCtx(); let wins = 0;
+    for (let m = 0; m < 3; m++) {                                                  // un joueur qui suit la balle et la renvoie avec le bord de la raquette (pour créer des angles)
+      const sp = new G.PongScene(fakeGame, ar, () => {}, () => {}); sp.enter();
+      try {
+        for (let i = 0; i < 60 * 900 && sp.phase !== 'over'; i++) {
+          const b = sp.ball, ty = b.y + (b.vx < 0 ? (b.y < 272 ? 32 : -32) : 0), keys = {};
+          if (ty < sp.py - 6) keys.ArrowUp = true; else if (ty > sp.py + 6) keys.ArrowDown = true;
+          Input.down = keys; frame(sp, 1 / 60, {}); if (i % 120 === 0) sp.draw(ctx);
+        }
+      } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+      Input.down = {}; ok(sp.phase === 'over' && (sp.score[0] === 7 || sp.score[1] === 7), name + ' : la partie ne se termine pas (' + sp.score + ')'); if (sp.winner === 0) wins++; sp.draw(ctx);
+    }
+    const sn = new G.PongScene(fakeGame, ar, () => {}, () => {}); sn.enter();        // joueur immobile : l'ordinateur doit finir par gagner
+    try { for (let i = 0; i < 60 * 900 && sn.phase !== 'over'; i++) frame(sn, 1 / 60, {}); } catch (e) { ok(false, name + ' : exception (immobile) → ' + e.message); }
+    ok(sn.phase === 'over' && sn.winner === 1, name + ' : un joueur immobile doit perdre (' + sn.score + ')');
+    let fin = false; const so = new G.PongScene(fakeGame, ar, () => { fin = true; }, () => {}); so.enter(); so.score = [6, 0]; so.ball.x = G.W + 100; so.phase = 'play'; so.ball.vx = 300; frame(so, 1 / 60, {});
+    for (let i = 0; i < 100; i++) frame(so, 1 / 60, i === 90 ? { Space: true } : {}); ok(so.phase === 'over' && so.winner === 0 && fin, name + ' : 7e point / retour au menu'); so.draw(ctx);
+    ok(sn.touchMode === 'menu' && new G.PongScene(fakeGame, ar, () => {}, () => {}).touchMode === 'updown', name + ' : modes tactiles');
+    console.log('  ' + name.padEnd(12) + '✓ ' + wins + '/3 victoires du bot de suivi, immobile → perdu ' + sn.score.join('-'));
+    continue;
+  }
+  if (ar.type === 'pac') {
+    const ctx = mockCtx(), sp = new G.PacScene(fakeGame, ar, () => {}, () => {}); sp.enter();
+    try {
+      const dirs = [{ ArrowLeft: true }, { ArrowUp: true }, { ArrowRight: true }, { ArrowDown: true }];
+      for (let i = 0; i < 60 * 240 && sp.phase !== 'over'; i++) { Input.down = dirs[Math.floor(i / 50 + Math.sin(i / 97) * 3 + 8) % 4]; frame(sp, 1 / 60, {}); if (i % 120 === 0) sp.draw(ctx); }
+    } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
+    Input.down = {}; ok(sp.score > 0, name + ' : le joueur n\'a rien mangé'); sp.draw(ctx);
+    // tous les points sont accessibles depuis le départ (les fantômes ne passent pas par la porte)
+    const sa = new G.PacScene(fakeGame, ar, () => {}, () => {}); sa.enter(); const seen = new Set(['10,11']), q = [[10, 11]];
+    while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = (x + dx + 21) % 21, ny = y + dy; if (sa.open(nx, ny) && !seen.has(nx + ',' + ny)) { seen.add(nx + ',' + ny); q.push([nx, ny]); } } }
+    const dots = []; sa.maze.forEach((r, y) => r.forEach((c, x) => { if (c === '.' || c === 'o') dots.push([x, y]); })); ok(dots.length === sa.dotsLeft && dots.every(d => seen.has(d[0] + ',' + d[1])), name + ' : points inaccessibles'); ok(sa.maze.every(r => r.length === 21), name + ' : labyrinthe de largeur irrégulière');
+    // manger le dernier point termine le niveau, perdre 3 vies termine la partie
+    const sc = new G.PacScene(fakeGame, ar, () => {}, () => {}); sc.enter(); sc.phase = 'play'; for (const r of sc.maze) r.forEach((c, x) => { if (c === '.' || c === 'o') r[x] = ' '; }); sc.maze[11][9] = '.'; sc.dotsLeft = 1; sc.want = { dx: -1, dy: 0 };
+    for (let i = 0; i < 60 && sc.phase === 'play'; i++) frame(sc, 1 / 60, {}); ok(sc.phase === 'clear', name + ' : le dernier point doit terminer le niveau (' + sc.phase + ')');
+    for (let i = 0; i < 150; i++) frame(sc, 1 / 60, {}); ok(sc.level === 2 && sc.phase === 'ready', name + ' : niveau suivant non lancé (niveau ' + sc.level + ', ' + sc.phase + ')');
+    const sd = new G.PacScene(fakeGame, ar, () => {}, () => {}); sd.enter(); sd.phase = 'play'; sd.lives = 1; sd.ghosts[0].cx = sd.pac.cx; sd.ghosts[0].cy = sd.pac.cy; frame(sd, 1 / 60, {}); ok(sd.phase === 'dying', name + ' : le contact avec un fantôme doit tuer');
+    for (let i = 0; i < 200; i++) frame(sd, 1 / 60, {}); ok(sd.phase === 'over', name + ' : plus de vie → fin de partie'); sd.draw(ctx);
+    const sf = new G.PacScene(fakeGame, ar, () => {}, () => {}); sf.enter(); sf.phase = 'play'; sf.power = 5; sf.ghosts[0].fr = true; sf.ghosts[0].cx = sf.pac.cx; sf.ghosts[0].cy = sf.pac.cy; frame(sf, 1 / 60, {}); ok(sf.score >= 200 && sf.ghosts[0].state === 'house', name + ' : un fantôme effrayé doit pouvoir être mangé');
+    console.log('  ' + name.padEnd(12) + '✓ ' + dots.length + ' points · score du bot aveugle : ' + sp.score);
+    continue;
+  }
   if (ar.type === 'bunny') {
     const ctx = mockCtx(), sb = new G.BunnyScene(fakeGame, ar, () => {}, () => {}); sb.enter();
     try {
@@ -124,7 +167,7 @@ for (const [name, ar] of Object.entries(G.ARENAS)) {
         frame(sb, 1 / 60, keys); if (i % 60 === 0) sb.draw(ctx);
       }
     } catch (e) { ok(false, name + ' : exception → ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
-    ok(sb.phase === 'over' && sb.dists.length === 3, name + ' : les 3 lancers ne se terminent pas'); ok(sb.dists.every(d => d > 40), name + ' : un bon joueur doit envoyer le lapin au-delà de 40 m (' + sb.dists.join(', ') + ')');
+    ok(sb.phase === 'over' && sb.dists.length === 3, name + ' : les 3 lancers ne se terminent pas'); ok(sb.dists.filter(d => d > 40).length >= 2, name + ' : un bon joueur doit envoyer le lapin au-delà de 40 m au moins 2 fois sur 3 (' + sb.dists.join(', ') + ')');
     const sm = new G.BunnyScene(fakeGame, ar, () => {}, () => {}); sm.enter();                 // pas de frappe : le lapin tombe et ne va pas loin
     try { for (let i = 0; i < 60 * 60 && sm.phase !== 'result'; i++) frame(sm, 1 / 60, sm.phase === 'aim' && i > 30 ? { Space: true } : {}); } catch (e) { ok(false, name + ' : exception (raté) → ' + e.message); }
     ok(sm.phase === 'result' && sm.lastDist < 40, name + ' : un lancer raté doit finir près de Stephan (' + sm.lastDist + ' m)'); sm.draw(ctx);

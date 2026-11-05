@@ -264,6 +264,20 @@ function drawPortrait(ctx, ch, x, y, w, h, t, talking, mood) {
   rr(ctx, x, y, w, h, 12, null, '#8fa6ff', 2);
 }
 
+/* Tête seule d'un personnage (balle de Pong, Stephan Man…) : centrée sur x,y, `size` = diamètre approximatif.
+   o = { t, mood, rot (radians), facing (1 | -1), talking } */
+function drawHead(ctx, ch, x, y, size, o) {
+  o = o || {};
+  const sc = (ch.scale || 1) * CHAR_SCALE, s = size / (30 * sc);          // la tête (visage + cheveux) fait ~30 unités de large dans drawCharacter
+  ctx.save(); ctx.translate(x, y);
+  if (o.rot) ctx.rotate(o.rot);
+  if (o.facing === -1) ctx.scale(-1, 1);
+  ctx.beginPath(); ctx.rect(-size * 0.62, -size * 0.7, size * 1.24, size * 1.2); ctx.clip();      // on ne garde que la tête (pas le corps)
+  ctx.scale(s, s);
+  drawCharacter(ctx, ch, -1 * sc, 56.85 * sc, { state: 'idle', t: o.t || 0, talking: o.talking, noShadow: true, mood: o.mood });      // le centre de la tête est en (1, -56.85) dans le repère du personnage
+  ctx.restore();
+}
+
 /* ============================================================
    OBJETS À RAMASSER   (centrés sur x,y)
    ============================================================ */

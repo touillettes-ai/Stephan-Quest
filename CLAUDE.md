@@ -81,6 +81,9 @@ Physique (`PHYS` dans engine.js) : vitesse 230, saut 640, gravité 1800, ressort
 
 **Mini-jeux** (menu principal → « Mini-jeux », liste `MINIGAMES` dans content.js ; chaque entrée pointe vers une arène `ARENAS.*`) : « Danse » (chanson entière `MUSIC.full`, record gardé via `Best`) et « Battle d'aura » (`AuraScene`, `type:'aura'`, `mode:'cpu'` : Stephan vs Arno, 15 flèches chacun leur tour, 3 manches gagnées ; l'ordinateur joue Arno avec une précision de 50 à 95 %) ; musique tirée au hasard entre « Forgot About Dre » (Dr. Dre) et « Gangsta's Paradise » (Coolio) : les flèches sont posées sur les vrais coups de grosse caisse / caisse claire / clap du MIDI (`MUSIC.dre/gangsta`, champ `hits`). Test visuel : `test/shot.html#aura/aura/9` (bot parfait). Égalité : départage aux coups parfaits, sinon « mort subite » (5 flèches chacun, répétée jusqu'à un vainqueur). « Lapin Sport » (`BunnyScene`, `type:'bunny'`, façon Yeti Sport) : angle de batte → frappe au bon moment sur Matthieu qui saute d'un immeuble → vol avec carottes (boosts), ballons, trampolines ; 3 lancers, record en mètres ; test visuel `test/shot.html#bunny/lapin/6`.
 
+**Pong Deve** (`PongScene`, `type:'pong'`) : Pong d'origine (fond noir, raquettes blanches) contre l'ordinateur, la balle est la tête de Stephan (`drawHead` dans draw.js = tête seule d'un personnage), premier à 7, victoires gardées (`pong.wins`). Réglages dans `PONG`. Test visuel `test/shot.html#pong/pong/6`.
+**Stephan Man** (`PacScene`, `type:'pac'`) : Pac-Man dans un labyrinthe symétrique 21×19 (`PAC_HALF`, tunnel à gauche/droite), Stephan = sa tête qui croque, les fantômes = Chef, Bastien, Olivier, Arno sous un drap ; gros points = fantômes effrayés et mangeables ; 3 vies, niveaux de plus en plus rapides, record `stephanman.best`. Réglages dans `PAC`. Test visuel `test/shot.html#pac/pac/7` ; menu `#minis/3`.
+
 ## Créer une cinématique
 Dans `CUTS`, un script générateur ; `c` = API :
 ```js

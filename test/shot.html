@@ -10,6 +10,7 @@ let sc;
 const step = (dt, keys) => { Input.pressed = keys || {}; sc.update(dt); Input.endFrame(); };
 if (kind === 'title') { sc = new TitleScene(game); sc.enter(); for (let i = 0; i < 45; i++) step(1 / 30); }
 else if (kind === 'select') { sc = new ChapterSelect(game); sc.enter(); sc.sel = +name || 0; step(1 / 30); }
+else if (kind === 'minis') { sc = new MiniGameSelect(game); sc.enter(); sc.sel = +name || 0; for (let i = 0; i < 20; i++) step(1 / 30); }
 else if (kind === 'credits') { sc = new CreditsScene(game); sc.enter(); for (let i = 0; i < 150; i++) step(1 / 30); }
 else if (kind === 'level') {
   sc = new LevelScene(game, LEVELS[name], () => {}, () => {}); sc.enter(); sc.p.inv = 999;
@@ -20,6 +21,14 @@ else if (kind === 'level') {
 else if (kind === 'bunny') {
   sc = new BunnyScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
   const T = +param || 8; for (let i = 0; i < T * 30; i++) { const keys = {}; if (sc.phase === 'aim' && Math.abs(sc.theta - 0.8) < 0.06) keys.Space = true; else if (sc.phase === 'fall' && !sc.swung) { const B = sc.sweet(); if (Math.hypot(sc.m.x - B.x, sc.m.y - B.y) < 40) keys.Space = true; } step(1 / 30, keys); }
+}
+else if (kind === 'pong') {
+  sc = new PongScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 8; for (let i = 0; i < T * 30; i++) { const b = sc.ball, k = {}; if (b.y < sc.py - 8) k.ArrowUp = true; else if (b.y > sc.py + 8) k.ArrowDown = true; Input.down = k; step(1 / 30, {}); } Input.down = {};
+}
+else if (kind === 'pac') {
+  sc = new PacScene(game, ARENAS[name], () => {}, () => {}); sc.enter();
+  const T = +param || 6; const seq = [{ ArrowLeft: true }, { ArrowUp: true }, { ArrowRight: true }, { ArrowDown: true }]; for (let i = 0; i < T * 30; i++) { Input.down = seq[Math.floor(i / 45) % 4]; step(1 / 30, {}); } Input.down = {};
 }
 else if (kind === 'aura') {
   sc = new AuraScene(game, ARENAS[name], () => {}, () => {}); sc.enter();

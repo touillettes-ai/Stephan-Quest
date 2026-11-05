@@ -1078,11 +1078,245 @@ class BunnyScene {
 }
 
 /* ============================================================
+   PongScene : « Pong Deve » — le Pong d'origine (fond noir, raquettes blanches) contre l'ordinateur,
+   mais la balle est la tête de Stephan. Premier à 7 points.
+   ============================================================ */
+const PONG = { padW: 14, padH: 92, padX: 34, padSpeed: 470, cpuSpeed: 330, r: 24, v0: 370, vmax: 780, toWin: 7, top: 24, bot: H - 24 };
+class PongScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.phase === 'over' ? 'menu' : 'updown'; }
+  enter() {
+    this.t = 0; this.score = [0, 0]; this.parts = []; this.py = H / 2; this.cy = H / 2; this.rally = 0; this.best = 0; this.cpuErr = 0; this.cpuThink = 0; this.cpuTy = H / 2;
+    this.mood = 'happy'; this.moodT = 0; this.wins0 = Best.get('pong.wins'); this.serve(Math.random() < 0.5 ? 1 : -1);
+  }
+  serve(dir) { this.ball = { x: W / 2, y: H / 2, vx: 0, vy: 0, rot: 0 }; this.dir = dir; this.phase = 'serve'; this.pt = 1.1; this.rally = 0; }
+  hitPaddle(side, padY) {                                                        // renvoi : l'angle dépend de l'endroit de la raquette touché
+    const b = this.ball, rel = clamp((b.y - padY) / (PONG.padH / 2 + PONG.r * 0.5), -1, 1), sp = Math.min(PONG.vmax, Math.hypot(b.vx, b.vy) * 1.06 + 12), a = rel * 0.95;
+    b.vx = -side * Math.cos(a) * sp; b.vy = Math.sin(a) * sp; this.rally++; this.best = Math.max(this.best, this.rally);
+    this.mood = 'surprised'; this.moodT = 0.3; burst(this.parts, b.x, b.y, 8, ['#fff', '#cfd8ff'], 200); Sfx.play('stomp');
+    if (side === -1) { this.cpuErr = rnd(-1, 1) * (26 + this.rally * 3); }
+  }
+  point(who) {
+    this.score[who]++; this.phase = 'point'; this.pt = 1.3; this.moodT = 9; this.mood = who === 0 ? 'laugh' : 'sad';
+    Sfx.play(who === 0 ? 'coin' : 'hurt'); burst(this.parts, clamp(this.ball.x, 20, W - 20), this.ball.y, 24, who === 0 ? CONFETTI : ['#fff', '#8fa6ff'], 320);
+    if (this.score[who] >= PONG.toWin) { this.phase = 'over'; this.pt = 0; this.winner = who; if (who === 0) { Best.set('pong.wins', this.wins0 + 1); Sfx.play('win'); burst(this.parts, W / 2, 200, 70, CONFETTI, 380); } }
+  }
+  update(dt) {
+    if (Input.back()) { this.onQuit(); return; }
+    this.t += dt; this.pt += this.phase === 'over' ? dt : 0; updateParticles(this.parts, dt); if (this.moodT > 0) { this.moodT -= dt; if (this.moodT <= 0 && this.phase !== 'point') this.mood = 'happy'; }
+    const up = Input.down.ArrowUp || Input.down.KeyW, dn = Input.down.ArrowDown || Input.down.KeyS;
+    if (this.phase !== 'over') this.py = clamp(this.py + ((dn ? 1 : 0) - (up ? 1 : 0)) * PONG.padSpeed * dt, PONG.top + PONG.padH / 2 + 6, PONG.bot - PONG.padH / 2 - 6);
+    const b = this.ball;
+    if (this.phase === 'serve') {
+      this.pt -= dt; b.rot += dt * 3;
+      if (this.pt <= 0) { const a = rnd(-0.5, 0.5); b.vx = this.dir * Math.cos(a) * PONG.v0; b.vy = Math.sin(a) * PONG.v0; this.phase = 'play'; this.mood = 'happy'; }
+    } else if (this.phase === 'play') {
+      for (let s = 0; s < 3 && this.phase === 'play'; s++) this.stepBall(dt / 3);
+      b.rot += b.vx * dt / 40;
+    } else if (this.phase === 'point') {
+      this.pt -= dt; b.rot += dt * 6; if (this.pt <= 0) this.serve(this.lastLoser);
+    } else if (this.phase === 'over' && this.pt > 0.8 && Input.confirm()) { this.onDone({ win: this.winner === 0 }); return; }
+    // l'ordinateur : suit la balle avec un petit retard, une vitesse limitée et une erreur de visée
+    this.cpuThink -= dt; if (this.cpuThink <= 0) { this.cpuThink = 0.09; this.cpuTy = b.vx > 0 && this.phase === 'play' ? b.y + this.cpuErr : lerp(this.cpuTy, H / 2, 0.15); }
+    const dy = this.cpuTy - this.cy, sp = Math.min(PONG.cpuSpeed + this.rally * 6, 400) * dt; this.cy = clamp(this.cy + clamp(dy, -sp, sp), PONG.top + PONG.padH / 2 + 6, PONG.bot - PONG.padH / 2 - 6);
+  }
+  stepBall(h) {
+    const b = this.ball, r = PONG.r; b.x += b.vx * h; b.y += b.vy * h;
+    if (b.y < PONG.top + r) { b.y = PONG.top + r; b.vy = Math.abs(b.vy); Sfx.play('blip'); }
+    if (b.y > PONG.bot - r) { b.y = PONG.bot - r; b.vy = -Math.abs(b.vy); Sfx.play('blip'); }
+    const lx = PONG.padX + PONG.padW, rx = W - PONG.padX - PONG.padW;
+    if (b.vx < 0 && b.x - r * 0.8 <= lx && b.x > PONG.padX - r && Math.abs(b.y - this.py) < PONG.padH / 2 + r * 0.6) { b.x = lx + r * 0.8; this.hitPaddle(-1, this.py); }
+    else if (b.vx > 0 && b.x + r * 0.8 >= rx && b.x < rx + PONG.padW + r && Math.abs(b.y - this.cy) < PONG.padH / 2 + r * 0.6) { b.x = rx - r * 0.8; this.hitPaddle(1, this.cy); }
+    if (b.x < -r) { this.lastLoser = -1; this.point(1); } else if (b.x > W + r) { this.lastLoser = 1; this.point(0); }
+  }
+  draw(ctx) {
+    rect(ctx, 0, 0, W, H, '#000');
+    rect(ctx, 0, PONG.top - 8, W, 8, '#fff'); rect(ctx, 0, PONG.bot, W, 8, '#fff');
+    for (let y = PONG.top + 6; y < PONG.bot - 10; y += 30) rect(ctx, W / 2 - 3, y, 6, 16, '#fff');
+    const mono = 'Courier New, monospace';
+    txt(ctx, String(this.score[0]), W / 2 - 80, 110, 84, '#fff', 'center', 'bold', mono); txt(ctx, String(this.score[1]), W / 2 + 80, 110, 84, '#fff', 'center', 'bold', mono);
+    rect(ctx, PONG.padX, this.py - PONG.padH / 2, PONG.padW, PONG.padH, '#fff'); rect(ctx, W - PONG.padX - PONG.padW, this.cy - PONG.padH / 2, PONG.padW, PONG.padH, '#fff');
+    const b = this.ball, bob = this.phase === 'serve' ? Math.sin(this.t * 8) * 3 : 0;
+    if (this.phase !== 'point' || this.pt > 0.3) drawHead(ctx, CHARS.hero, b.x, b.y + bob, PONG.r * 2.3, { t: this.t, mood: this.mood, rot: b.rot });
+    drawParticles(ctx, this.parts);
+    txt(ctx, 'TOI', 60, H - 36, 14, '#888', 'left', 'bold', mono); txt(ctx, 'ORDINATEUR', W - 60, H - 36, 14, '#888', 'right', 'bold', mono);
+    txt(ctx, 'PONG DEVE  ·  premier à ' + PONG.toWin, W / 2, H - 36, 14, '#888', 'center', 'bold', mono);
+    if (this.phase === 'serve' && this.score[0] + this.score[1] === 0) txt(ctx, Device.touch ? 'Boutons ▲ ▼' : '↑ ↓  (ou Z / S) : bouger la raquette', W / 2, 170, 20, '#fff', 'center', 'bold', mono);
+    if (this.phase === 'over') {
+      rect(ctx, W / 2 - 300, 190, 600, 190, '#000'); rect(ctx, W / 2 - 300, 190, 600, 4, '#fff'); rect(ctx, W / 2 - 300, 376, 600, 4, '#fff');
+      txt(ctx, this.winner === 0 ? 'STEPHAN GAGNE !' : 'L\'ORDINATEUR GAGNE', W / 2, 250, 38, '#fff', 'center', 'bold', mono);
+      txt(ctx, this.score[0] + ' - ' + this.score[1] + '   ·   plus longue série : ' + this.best + ' renvois', W / 2, 292, 18, '#ccc', 'center', 'bold', mono);
+      txt(ctx, 'Victoires : ' + (this.wins0 + (this.winner === 0 ? 1 : 0)), W / 2, 324, 18, '#ffd23f', 'center', 'bold', mono);
+      if (this.pt > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, Device.touch ? 'Touche pour revenir au menu' : 'Entrée pour revenir au menu', W / 2, 362, 16, '#fff', 'center', 'bold', mono);
+    }
+  }
+}
+
+/* ============================================================
+   PacScene : « Stephan Man » — un Pac-Man dont le héros est la tête de Stephan.
+   Les fantômes sont des collègues (Chef, Bastien, Olivier, Arno). Gros points = Stephan fait peur à tout le monde.
+   ============================================================ */
+const PAC_HALF = [
+  '###########', '#o........#', '#.###.###.#', '#..........', '#.###.#.###', '#.....#....', '#####.###..', '#####.#....', '#####.#.##D', ' .......#  ',
+  '#####.#.###', '#####.#....', '#.....#....', '#.###.#.###', '#...#......', '#.###.#.###', '#.###.###.#', '#o.........', '###########',
+];
+const PAC_MAZE = PAC_HALF.map(h => h + h.slice(0, 10).split('').reverse().join(''));        // labyrinthe symétrique : 21 colonnes × 19 lignes
+const PAC_C = 21, PAC_R = PAC_MAZE.length, PAC_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const PAC = { cell: 26, ox: 207, oy: 46, speed: 6.6, gspeed: 5.3, fspeed: 3.3, powerT: 7, lives: 3, start: [10, 11] };
+const PAC_GHOSTS = [
+  { key: 'chef', color: '#e8453c', aggr: 0.85, wait: 0 }, { key: 'bastien', color: '#ff8fc8', aggr: 0.7, wait: 3 },
+  { key: 'olivier', color: '#4fd8ff', aggr: 0.55, wait: 6.5 }, { key: 'arno', color: '#ffa23c', aggr: 0.45, wait: 10 },
+];
+class PacScene {
+  constructor(game, def, onDone, onQuit) { this.game = game; this.def = def; this.onDone = onDone; this.onQuit = onQuit; }
+  get touchMode() { return this.phase === 'over' ? 'menu' : 'pacman'; }
+  enter() {
+    this.t = 0; this.score = 0; this.lives = PAC.lives; this.level = 1; this.parts = []; this.pops = []; this.best0 = Best.get('stephanman.best'); this.newRecord = false; this.munch = 0;
+    this.loadMaze(); this.resetActors(); this.phase = 'ready'; this.pt = 2.4;
+  }
+  loadMaze() { this.maze = PAC_MAZE.map(r => r.split('')); this.dotsLeft = this.maze.reduce((n, r) => n + r.filter(c => c === '.' || c === 'o').length, 0); }
+  resetActors() {
+    this.pac = { cx: PAC.start[0], cy: PAC.start[1], dx: 0, dy: 0, p: 0 }; this.want = { dx: 0, dy: 0 }; this.face = 1; this.power = 0; this.combo = 0;
+    this.ghosts = PAC_GHOSTS.map((g, i) => Object.assign({ i }, g, i === 0 ? { cx: 10, cy: 7, dx: -1, dy: 0, p: 0, state: 'out', fr: false } : { cx: 8 + i, cy: 9, dx: 0, dy: 0, p: 0, state: 'house', fr: false, timer: g.wait * Math.max(0.4, 1 - 0.12 * (this.level - 1)) }));
+  }
+  open(x, y, door) { x = mod(x, PAC_C); if (y < 0 || y >= PAC_R) return false; const c = this.maze[y][x]; return c !== '#' && (c !== 'D' || !!door); }
+  pos(e) { return { x: e.cx + e.dx * e.p, y: e.cy + e.dy * e.p }; }
+  scr(x, y) { return { x: PAC.ox + (x + 0.5) * PAC.cell, y: PAC.oy + (y + 0.5) * PAC.cell }; }
+  advance(e, dist, choose) {
+    if (!e.dx && !e.dy) { choose(e); if (!e.dx && !e.dy) return; }
+    e.p += dist;
+    while (e.p >= 1) { e.cx = mod(e.cx + e.dx, PAC_C); e.cy += e.dy; e.p -= 1; choose(e); if (!e.dx && !e.dy) { e.p = 0; return; } }
+  }
+  flip(e) { if (!e.dx && !e.dy) return; e.cx = mod(e.cx + e.dx, PAC_C); e.cy += e.dy; e.p = 1 - e.p; e.dx = -e.dx; e.dy = -e.dy; }          // demi-tour au milieu d'un couloir
+  choosePac(e) {
+    const w = this.want;
+    if ((w.dx || w.dy) && this.open(e.cx + w.dx, e.cy + w.dy)) { e.dx = w.dx; e.dy = w.dy; }
+    else if (!this.open(e.cx + e.dx, e.cy + e.dy)) { e.dx = 0; e.dy = 0; }
+  }
+  chooseGhost(g) {
+    let opts = PAC_DIRS.filter(d => this.open(g.cx + d[0], g.cy + d[1])); const fwd = opts.filter(d => !(d[0] === -g.dx && d[1] === -g.dy)); if (fwd.length) opts = fwd; if (!opts.length) return;
+    let pick;
+    if (g.fr || Math.random() > g.aggr) pick = opts[Math.floor(Math.random() * opts.length)];
+    else {
+      const a = this.pac; let tx = a.cx, ty = a.cy;
+      if (g.key === 'bastien') { tx += a.dx * 3; ty += a.dy * 3; }
+      else if (g.key === 'arno' && Math.hypot(tx - g.cx, ty - g.cy) < 6) { tx = 1; ty = 17; }
+      let bd = 1e9; for (const d of opts) { const dd = Math.hypot(g.cx + d[0] - tx, g.cy + d[1] - ty); if (dd < bd) { bd = dd; pick = d; } }
+    }
+    g.dx = pick[0]; g.dy = pick[1];
+  }
+  say(text, x, y, color) { this.pops.push({ text, x, y, t: 0, color: color || '#fff' }); }
+  die() { this.phase = 'dying'; this.pt = 1.6; this.lives--; Sfx.play('hurt'); }
+  finish() {
+    this.phase = 'over'; this.pt = 0; this.newRecord = this.score > this.best0; if (this.newRecord) { Best.set('stephanman.best', this.score); burst(this.parts, W / 2, 200, 60, CONFETTI, 380); Sfx.play('win'); }
+  }
+  update(dt) {
+    if (Input.back()) { this.onQuit(); return; }
+    this.t += dt; updateParticles(this.parts, dt); for (const p of this.pops) p.t += dt; this.pops = this.pops.filter(p => p.t < 1.1);
+    switch (this.phase) {
+      case 'ready': this.pt -= dt; this.readInput(); if (this.pt <= 0) this.phase = 'play'; break;
+      case 'play': this.stepPlay(dt); break;
+      case 'dying': this.pt -= dt; if (this.pt <= 0) { if (this.lives <= 0) this.finish(); else { this.resetActors(); this.phase = 'ready'; this.pt = 1.6; } } break;
+      case 'clear': this.pt -= dt; if (this.pt <= 0) { this.level++; this.loadMaze(); this.resetActors(); this.phase = 'ready'; this.pt = 1.8; } break;
+      case 'over': this.pt += dt; if (this.pt > 0.8 && Input.confirm()) this.onDone({ score: this.score }); break;
+    }
+  }
+  readInput() {
+    const dirOf = s => (s.ArrowLeft || s.KeyA) ? [-1, 0] : (s.ArrowRight || s.KeyD) ? [1, 0] : (s.ArrowUp || s.KeyW) ? [0, -1] : (s.ArrowDown || s.KeyS) ? [0, 1] : null;
+    const d = dirOf(Input.pressed) || dirOf(Input.down); if (d) this.want = { dx: d[0], dy: d[1] };
+  }
+  stepPlay(dt) {
+    this.readInput(); const a = this.pac, w = this.want;
+    if ((a.dx || a.dy) && w.dx === -a.dx && w.dy === -a.dy) this.flip(a);                       // demi-tour immédiat
+    this.advance(a, PAC.speed * dt, e => this.choosePac(e)); if (a.dx) this.face = a.dx;
+    // manger
+    const pp = this.pos(a), cx = mod(Math.round(pp.x), PAC_C), cy = clamp(Math.round(pp.y), 0, PAC_R - 1), ch = this.maze[cy][cx];
+    if (ch === '.' || ch === 'o') {
+      this.maze[cy][cx] = ' '; this.dotsLeft--; this.score += ch === 'o' ? 50 : 10; if (++this.munch % 3 === 0) Sfx.play('blip');
+      if (ch === 'o') { this.power = Math.max(3, PAC.powerT - 0.5 * (this.level - 1)); this.combo = 0; for (const g of this.ghosts) if (g.state === 'out') { g.fr = true; this.flip(g); } Sfx.play('spring'); }
+      if (this.dotsLeft <= 0) { this.phase = 'clear'; this.pt = 2; Sfx.play('win'); burst(this.parts, W / 2, 200, 60, CONFETTI, 380); return; }
+    }
+    if (this.power > 0) { this.power -= dt; if (this.power <= 0) for (const g of this.ghosts) g.fr = false; }
+    // fantômes
+    for (const g of this.ghosts) {
+      if (g.state === 'house') { g.timer -= dt; if (g.timer <= 0) { g.state = 'out'; g.cx = 10; g.cy = 7; g.dx = Math.random() < 0.5 ? 1 : -1; g.dy = 0; g.p = 0; g.fr = false; } continue; }
+      const sp = (g.fr ? PAC.fspeed : PAC.gspeed + 0.35 * (this.level - 1)) * dt; this.advance(g, sp, e => this.chooseGhost(e));
+      const gp = this.pos(g); let ddx = pp.x - gp.x; if (Math.abs(ddx) > PAC_C / 2) ddx -= Math.sign(ddx) * PAC_C;
+      if (Math.hypot(ddx, pp.y - gp.y) < 0.6) {
+        if (g.fr) {                                                                 // Stephan croque le collègue
+          const pts = 200 * Math.pow(2, this.combo++); this.score += pts; const s = this.scr(gp.x, gp.y); this.say(String(pts), s.x, s.y, '#7dffd2'); burst(this.parts, s.x, s.y, 16, [g.color, '#fff'], 260); Sfx.play('coin');
+          g.state = 'house'; g.fr = false; g.timer = 2.8; g.cx = 9 + (g.i % 3); g.cy = 9; g.dx = g.dy = 0; g.p = 0;
+        } else { this.die(); return; }
+      }
+    }
+  }
+  draw(ctx) {
+    const cs = PAC.cell, ox = PAC.ox, oy = PAC.oy, mono = 'Courier New, monospace';
+    rect(ctx, 0, 0, W, H, '#05061a');
+    // labyrinthe
+    for (let y = 0; y < PAC_R; y++) for (let x = 0; x < PAC_C; x++) {
+      const c = this.maze[y][x], px = ox + x * cs, py = oy + y * cs;
+      if (c === '#') {
+        rect(ctx, px, py, cs, cs, '#0b1448'); ctx.strokeStyle = '#4a6cff'; ctx.lineWidth = 2; ctx.beginPath();
+        const wall = (xx, yy) => yy < 0 || yy >= PAC_R || xx < 0 || xx >= PAC_C || this.maze[yy][xx] === '#';
+        if (!wall(x - 1, y)) { ctx.moveTo(px + 1, py); ctx.lineTo(px + 1, py + cs); } if (!wall(x + 1, y)) { ctx.moveTo(px + cs - 1, py); ctx.lineTo(px + cs - 1, py + cs); }
+        if (!wall(x, y - 1)) { ctx.moveTo(px, py + 1); ctx.lineTo(px + cs, py + 1); } if (!wall(x, y + 1)) { ctx.moveTo(px, py + cs - 1); ctx.lineTo(px + cs, py + cs - 1); }
+        ctx.stroke();
+      } else if (c === 'D') rect(ctx, px, py + cs / 2 - 2, cs, 4, '#ff8fc8');
+      else if (c === '.') circ(ctx, px + cs / 2, py + cs / 2, 2.6, '#ffe2b0');
+      else if (c === 'o') { circ(ctx, px + cs / 2, py + cs / 2, 6 + Math.sin(this.t * 8) * 1.2, '#fff6d0'); circ(ctx, px + cs / 2, py + cs / 2, 3.5, '#ffd23f'); }
+    }
+    ctx.save(); ctx.beginPath(); ctx.rect(ox, oy, PAC_C * cs, PAC_R * cs); ctx.clip();
+    // fantômes (collègues sous un drap)
+    for (const g of this.ghosts) {
+      let p = this.pos(g), bob = 0; if (g.state === 'house') { p = { x: g.cx, y: g.cy }; bob = Math.sin(this.t * 6 + g.cx) * 2; }
+      const s = this.scr(p.x, p.y), flash = this.power > 0 && this.power < 2 && Math.floor(this.t * 6) % 2 === 0, col = g.fr ? (flash ? '#fff' : '#2f45d8') : g.color;
+      for (const off of [0, -PAC_C * cs, PAC_C * cs]) this.drawGhost(ctx, g, s.x + off, s.y + bob, col, g.fr);
+    }
+    // Stephan
+    const a = this.pac, pp = this.pos(a), sp = this.scr(pp.x, pp.y), moving = (a.dx || a.dy) && this.phase === 'play', chomp = moving ? Math.floor(this.t * 9) % 2 === 0 : false;
+    for (const off of [0, -PAC_C * cs, PAC_C * cs]) {
+      if (this.phase === 'dying') { const k = clamp(this.pt / 1.6, 0, 1); if (k > 0.05) drawHead(ctx, CHARS.hero, sp.x + off, sp.y, 30 * k, { t: this.t, mood: 'sad', rot: (1 - k) * 14 }); }
+      else drawHead(ctx, CHARS.hero, sp.x + off, sp.y, 32, { t: this.t, mood: chomp ? 'surprised' : 'happy', facing: this.face, rot: (a.dy ? a.dy * 0.7 * this.face : 0) });
+    }
+    ctx.restore();
+    drawParticles(ctx, this.parts);
+    for (const p of this.pops) { ctx.globalAlpha = clamp(1.1 - p.t, 0, 1); txt(ctx, p.text, p.x, p.y - p.t * 30, 18, p.color, 'center', 'bold', mono); ctx.globalAlpha = 1; }
+    // panneaux
+    txt(ctx, 'STEPHAN', 104, 80, 24, '#ffd23f', 'center', 'bold', mono); txt(ctx, 'MAN', 104, 104, 24, '#ffd23f', 'center', 'bold', mono);
+    txt(ctx, 'SCORE', 104, 160, 15, '#8fa6ff', 'center', 'bold', mono); txt(ctx, String(this.score), 104, 188, 28, '#fff', 'center', 'bold', mono);
+    txt(ctx, 'NIVEAU ' + this.level, 104, 232, 16, '#cfd8ff', 'center', 'bold', mono);
+    txt(ctx, 'RECORD', 856, 80, 15, '#8fa6ff', 'center', 'bold', mono); txt(ctx, String(Math.max(this.best0, this.score)), 856, 108, 24, '#ffe08a', 'center', 'bold', mono);
+    txt(ctx, 'VIES', 856, 160, 15, '#8fa6ff', 'center', 'bold', mono);
+    for (let i = 0; i < PAC.lives; i++) { ctx.globalAlpha = i < this.lives ? 1 : 0.2; drawHead(ctx, CHARS.hero, 826 + i * 30, 192, 26, { t: this.t, mood: 'happy' }); ctx.globalAlpha = 1; }
+    if (this.power > 0) { rr(ctx, 756, 224, 200, 14, 7, 'rgba(255,255,255,.15)'); rr(ctx, 756, 224, 200 * clamp(this.power / PAC.powerT, 0, 1), 14, 7, '#7dffd2'); txt(ctx, 'COLLÈGUES EFFRAYÉS', 856, 256, 12, '#7dffd2', 'center', 'bold', mono); }
+    txt(ctx, Device.touch ? '◀ ▶ ▲ ▼' : '← ↑ ↓ → ou ZQSD', 104, H - 56, 13, '#8c96c8', 'center', 'bold', mono); txt(ctx, 'Échap : quitter', 104, H - 36, 13, '#8c96c8', 'center', 'bold', mono);
+    const cm = this.scr(10, 12);
+    if (this.phase === 'ready') txt(ctx, 'PRÊT ?', cm.x, cm.y + 6, 24, '#ffd23f', 'center', 'bold', mono);
+    if (this.phase === 'clear') txt(ctx, 'NIVEAU TERMINÉ !', W / 2, 270, 36, '#7dffa0', 'center', 'bold', mono);
+    if (this.phase === 'over') {
+      rr(ctx, W / 2 - 240, 150, 480, 240, 18, 'rgba(5,6,26,.94)', '#ffd23f', 3);
+      txt(ctx, this.newRecord ? 'Nouveau record !' : 'Fin de partie', W / 2, 205, 34, this.newRecord ? '#7dffa0' : '#ffd23f', 'center', 'bold', mono);
+      txt(ctx, 'Score : ' + this.score, W / 2, 250, 28, '#fff', 'center', 'bold', mono); txt(ctx, 'Niveau atteint : ' + this.level, W / 2, 285, 18, '#cfd8ff', 'center', 'bold', mono);
+      txt(ctx, 'Record : ' + Math.max(this.best0, this.score), W / 2, 315, 18, '#ffe08a', 'center', 'bold', mono);
+      if (this.pt > 0.8 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, Device.touch ? 'Touche pour revenir au menu' : 'Entrée pour revenir au menu', W / 2, 360, 16, '#8fa6ff', 'center', 'bold', mono);
+    }
+  }
+  drawGhost(ctx, g, x, y, col, fr) {                                             // un drap coloré avec le visage du collègue
+    const w = 13, wave = Math.sin(this.t * 14) * 1.5;
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y - 1, w, Math.PI, 0); ctx.lineTo(x + w, y + 11);
+    for (let k = 0; k < 4; k++) { ctx.lineTo(x + w - (k + 0.5) * w / 2, y + 7 + (k % 2 ? wave : -wave) * 0.5); ctx.lineTo(x + w - (k + 1) * w / 2, y + 11); }
+    ctx.closePath(); ctx.fill();
+    drawHead(ctx, CHARS[g.key], x, y - 3, 25, { t: this.t, mood: fr ? 'surprised' : 'angry' });
+  }
+}
+
+/* ============================================================
    MiniGameSelect : menu des mini-jeux (liste MINIGAMES dans content.js)
    ============================================================ */
 function startMiniGame(game, def) {
   const back = () => game.go(new MiniGameSelect(game));
-  game.go(def.type === 'broom' ? new BroomScene(game, def, back, back) : def.type === 'aura' ? new AuraScene(game, def, back, back) : def.type === 'bunny' ? new BunnyScene(game, def, back, back) : new DanceScene(game, def, back, back));
+  game.go(def.type === 'broom' ? new BroomScene(game, def, back, back) : def.type === 'aura' ? new AuraScene(game, def, back, back) : def.type === 'bunny' ? new BunnyScene(game, def, back, back) : def.type === 'pong' ? new PongScene(game, def, back, back) : def.type === 'pac' ? new PacScene(game, def, back, back) : new DanceScene(game, def, back, back));
 }
 class MiniGameSelect {
   constructor(game) { this.game = game; }
@@ -1094,8 +1328,8 @@ class MiniGameSelect {
     if (Input.menuUp()) { this.sel = (this.sel + n - 1) % n; Sfx.play('blip'); }
     if (Input.menuDown()) { this.sel = (this.sel + 1) % n; Sfx.play('blip'); }
     if (Input.tap) {
-      const i = Math.floor((Input.tap.y - 104) / 100);
-      if (Input.tap.x > 60 && Input.tap.x < 900 && i >= 0 && i < n && Input.tap.y - 104 - i * 100 < 88) { if (this.sel === i) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[i].def); return; } this.sel = i; Sfx.play('blip'); }
+      const i = Math.floor((Input.tap.y - 92) / 84);
+      if (Input.tap.x > 60 && Input.tap.x < 900 && i >= 0 && i < n && Input.tap.y - 92 - i * 84 < 76) { if (this.sel === i) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[i].def); return; } this.sel = i; Sfx.play('blip'); }
     }
     if (Input.confirm()) { Sfx.play('door'); startMiniGame(this.game, MINIGAMES[this.sel].def); return; }
     if (Input.back()) this.game.go(new TitleScene(this.game));
@@ -1105,14 +1339,18 @@ class MiniGameSelect {
     ctx.fillStyle = 'rgba(8,6,24,.72)'; ctx.fillRect(0, 0, W, H);
     txt(ctx, 'Mini-jeux', 60, 80, 40, '#ffd23f');
     MINIGAMES.forEach((g, i) => {
-      const y = 104 + i * 100, on = i === this.sel, best = g.best ? Best.get(g.best) : 0;
-      rr(ctx, 60, y, 840, 88, 16, on ? '#ffd23f' : 'rgba(255,255,255,.12)', on ? '#fff' : 'rgba(255,255,255,.3)', 2);
-      if (g.icon === 'bunny') { drawCharacter(ctx, CHARS.hero, 120, y + 82, { facing: 1, state: 'idle', t: this.t }); drawCharacter(ctx, CHARS.lapin, 215, y + 70 - (on ? Math.abs(Math.sin(this.t * 5)) * 16 : 0), { facing: 1, state: 'jump', t: this.t, rot: on ? this.t * 4 : 0 }); }
-      else if (g.icon === 'duel') { drawCharacter(ctx, CHARS.hero, 120, y + 82, { facing: 1, state: on ? 'cheer' : 'idle', t: this.t }); drawCharacter(ctx, CHARS.arno, 215, y + 82, { facing: -1, state: on ? 'cheer' : 'idle', t: this.t + 1 }); }
-      else for (let l = 0; l < 4; l++) drawArrow(ctx, 120 + l * 52, y + 44 + Math.sin(this.t * 4 + l) * (on ? 4 : 0), l, DANCE_LANES.color[l], 19, on ? '#2a1a3e' : '#fff');
-      txt(ctx, g.title, 350, y + 38, 30, on ? '#2a1a3e' : '#fff');
-      txt(ctx, g.desc, 350, y + 68, 16, on ? '#4a3a5e' : '#cfd8ff');
-      if (best) txt(ctx, (g.bestLabel || 'Record') + ' : ' + best + (g.bestUnit || ''), 880, y + 38, 20, on ? '#2a1a3e' : '#ffe08a', 'right');
+      const y = 92 + i * 84, on = i === this.sel, best = g.best ? Best.get(g.best) : 0, k = 0.84;
+      rr(ctx, 60, y, 840, 76, 16, on ? '#ffd23f' : 'rgba(255,255,255,.12)', on ? '#fff' : 'rgba(255,255,255,.3)', 2);
+      ctx.save(); ctx.beginPath(); ctx.rect(70, y + 2, 270, 72); ctx.clip(); ctx.scale(k, k); const fy = (y + 70) / k;       // petites icônes
+      if (g.icon === 'bunny') { drawCharacter(ctx, CHARS.hero, 120 / k, fy, { facing: 1, state: 'idle', t: this.t }); drawCharacter(ctx, CHARS.lapin, 215 / k, fy - 12 - (on ? Math.abs(Math.sin(this.t * 5)) * 16 : 0), { facing: 1, state: 'jump', t: this.t, rot: on ? this.t * 4 : 0 }); }
+      else if (g.icon === 'duel') { drawCharacter(ctx, CHARS.hero, 120 / k, fy, { facing: 1, state: on ? 'cheer' : 'idle', t: this.t }); drawCharacter(ctx, CHARS.arno, 215 / k, fy, { facing: -1, state: on ? 'cheer' : 'idle', t: this.t + 1 }); }
+      else if (g.icon === 'pong') { rect(ctx, 90 / k, (y + 14) / k, 6, 48 / k, '#fff'); rect(ctx, 300 / k, (y + 14 + (on ? Math.sin(this.t * 4) * 8 : 0)) / k, 6, 48 / k, '#fff'); drawHead(ctx, CHARS.hero, (195 + (on ? Math.sin(this.t * 4) * 70 : 0)) / k, (y + 38 + (on ? Math.cos(this.t * 6) * 10 : 0)) / k, 34, { t: this.t, mood: 'happy', rot: this.t * 2 }); }
+      else if (g.icon === 'pac') { for (let d = 0; d < 4; d++) circ(ctx, (205 + d * 24) / k, (y + 38) / k, 2.5 / k * k, '#ffe2b0'); drawHead(ctx, CHARS.hero, (130 + (on ? (this.t * 60) % 40 : 0)) / k, (y + 38) / k, 38, { t: this.t, mood: Math.floor(this.t * 9) % 2 ? 'surprised' : 'happy' }); drawHead(ctx, CHARS.chef, 310 / k, (y + 38) / k, 30, { t: this.t, mood: 'angry' }); }
+      else for (let l = 0; l < 4; l++) drawArrow(ctx, 120 / k + l * 52 / k, (y + 38) / k + Math.sin(this.t * 4 + l) * (on ? 4 : 0), l, DANCE_LANES.color[l], 19, on ? '#2a1a3e' : '#fff');
+      ctx.restore();
+      txt(ctx, g.title, 350, y + 34, 28, on ? '#2a1a3e' : '#fff');
+      txt(ctx, g.desc, 350, y + 60, 15, on ? '#4a3a5e' : '#cfd8ff');
+      if (best) txt(ctx, (g.bestLabel || 'Record') + ' : ' + best + (g.bestUnit || ''), 880, y + 34, 19, on ? '#2a1a3e' : '#ffe08a', 'right');
     });
     txt(ctx, Device.touch ? 'Touche un mini-jeu, puis touche-le encore pour jouer' : '↑ ↓ : choisir   ·   Entrée : jouer   ·   Échap : retour', W / 2, H - 20, 15, '#fff', 'center');
   }
