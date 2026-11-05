@@ -226,7 +226,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);

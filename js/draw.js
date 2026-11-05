@@ -294,6 +294,9 @@ function drawItem(ctx, kind, x, y, s, t, v) {
     case 'ticketbl':
       ctx.rotate(-0.14); rr(ctx, -14, -10, 28, 20, 3, '#fffdf4', '#3a4b5f', 1.5); rect(ctx, -14, -10, 6, 20, '#e0a030');
       line(ctx, -4, -4, 10, -4, '#7a8aa0', 1.6); line(ctx, -4, 1, 7, 1, '#7a8aa0', 1.6); circ(ctx, 9, 6, 2.2, '#d6402f'); break;
+    case 'basket':                                // ballon de basket
+      circ(ctx, 0, 0, 11, '#e8762c'); ctx.strokeStyle = '#3a1c0c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.2832); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.moveTo(0, -11); ctx.lineTo(0, 11);
+      ctx.moveTo(-7.8, -7.8); ctx.quadraticCurveTo(-3, 0, -7.8, 7.8); ctx.moveTo(7.8, -7.8); ctx.quadraticCurveTo(3, 0, 7.8, 7.8); ctx.stroke(); break;
     case 'ballon':
       circ(ctx, 0, 0, 11, '#f4f4f4'); ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.2832); ctx.stroke();
       poly(ctx, [[0, -5], [4.8, -1.5], [3, 4], [-3, 4], [-4.8, -1.5]], '#2a2a2a'); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 1.2566; line(ctx, Math.cos(a) * 5, Math.sin(a) * 5, Math.cos(a) * 10, Math.sin(a) * 10, '#333', 1.1); } break;
@@ -378,7 +381,7 @@ function drawItem(ctx, kind, x, y, s, t, v) {
   }
   ctx.restore();
 }
-const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
+const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'basket', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
 
 /* ============================================================
    ENNEMIS / OBSTACLES   (pieds en y, centrés sur x)
@@ -583,8 +586,15 @@ function drawProp(ctx, p, t) {
       for (const dx of [-0.38, -0.2, 0.2, 0.38]) { rr(ctx, x + w * dx - 8, y - 46, 16, 5, 1, '#fff'); } break; }
     case 'seat':  // siège de train
       rr(ctx, x - 22, y - 62, 44, 62, 8, '#2c5d9e'); rr(ctx, x - 26, y - 26, 52, 22, 6, '#3a74be'); rr(ctx, x - 14, y - 76, 28, 16, 6, '#e8edf5'); break;
+    case 'panier':                                // panier de basket sur pied, cercle tourné vers la gauche
+      rect(ctx, x + 28, y - 150, 6, 150, '#7d8594'); rr(ctx, x + 22, y - 176, 7, 56, 2, '#f2f5fa', '#59637a', 2); rr(ctx, x + 24, y - 148, 5, 22, 1, 'rgba(214,64,47,.5)');
+      ctx.strokeStyle = '#e0553c'; ctx.lineWidth = 3.2; ctx.beginPath(); ctx.moveTo(x - 8, y - 132); ctx.lineTo(x + 22, y - 132); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(x - 6 + i * 9, y - 131); ctx.lineTo(x - 1 + i * 6, y - 112); } ctx.moveTo(x - 1, y - 112); ctx.lineTo(x + 17, y - 112); ctx.stroke(); break;
     default:
-      if (ITEM_KINDS.includes(p.kind)) drawItem(ctx, p.kind, x, y - (p.lift === undefined ? 14 : p.lift), p.scale || 1.4, t, p.v);
+      if (ITEM_KINDS.includes(p.kind)) {
+        if (p.rot) { ctx.save(); ctx.translate(x, y - (p.lift === undefined ? 14 : p.lift)); ctx.rotate(p.rot); drawItem(ctx, p.kind, 0, 0, p.scale || 1.4, t, p.v); ctx.restore(); }
+        else drawItem(ctx, p.kind, x, y - (p.lift === undefined ? 14 : p.lift), p.scale || 1.4, t, p.v);
+      }
   }
 }
 

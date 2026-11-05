@@ -646,9 +646,39 @@ CUTS.j3_pi_intro = {
   type: 'cutscene', bg: 'openspace',
   script: function* (c) {
     c.prop('desk', 740, FLOOR_Y); c.prop('tascarottes', 740, FLOOR_Y - 34);
+    c.prop('panier', 915, FLOOR_Y - 28);
     c.add('coline', CHARS.coline, 420, { face: 1 }); c.add('amelie', CHARS.amelie, 520, { face: -1 });
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
-    yield c.caption('De bon matin. Open space.', 2.4);
+    // dans le fond : Bastien et Olivier jouent au basket (z < 0 et pieds plus haut = plus loin)
+    const BY = FLOOR_Y - 28, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 13, y: BY - 46 });
+    c.add('bastien', CHARS.bastien, 650, { y: BY, face: 1, z: -1 }); c.add('olivier', CHARS.olivier, 820, { y: BY, face: -1, z: -1 });
+    const ball = c.prop('basket', 663, BY - 46, { front: true, scale: 1.3, lift: 0 });
+    const lob = (x2, y2, dur, h) => { const x0 = ball.x, y0 = ball.y; return { t: 0, update(dt) { this.t += dt; const k = Math.min(1, this.t / dur); ball.x = lerp(x0, x2, k); ball.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h; ball.rot = (ball.rot || 0) + dt * 9; return k >= 1; } }; };
+    const fly = (k, x2, dur) => { const a = c.actors[k], x0 = a.x, y0 = a.y; a.state = 'hurt'; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = y0 - Math.sin(p * Math.PI) * 130; a.rot = p * 11; return p >= 1; } }; };
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const run = g => { let w = null; return { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = r.value; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; };
+    const passes = function* () { for (let i = 0; i < 3; i++) { const to = hand(i % 2 ? 'bastien' : 'olivier'); c.sfx('blip'); yield lob(to.x, to.y, 0.8, 70); } };
+    yield [c.caption('De bon matin. Open space.', 2.4), run(passes())];
+    // un tir un peu trop haut… le ballon retombe sur la tête d'Amélie
+    c.sfx('jump'); yield lob(520, FLOOR_Y - 92, 1.3, 270);
+    c.sfx('hurt'); c.shake(0.25); c.pose('amelie', 'hurt'); c.mood('amelie', 'surprised'); c.emote('amelie', '*', 1);
+    yield lob(585, FLOOR_Y - 12, 0.55, 60);
+    yield c.say('amelie', 'Ouille !', { mood: 'surprised' });
+    c.pose('amelie', 'idle'); c.mood('amelie', undefined);
+    c.mood('bastien', 'surprised'); c.mood('olivier', 'surprised'); c.actors.olivier.talking = true;
+    yield c.say('bastien', 'ALERTE GÉNÉRALE !', { name: 'Bastien et Olivier', mood: 'surprised' });
+    c.actors.olivier.talking = false;
+    // Amélie ramasse le ballon, hurle, et le renvoie sur les deux joueurs : ils sortent de l'écran
+    yield c.walk('amelie', 572, 150); c.face('amelie', 1);
+    ball.x = 586; ball.y = FLOOR_Y - 46; c.pose('amelie', 'cheer'); c.mood('amelie', 'angry');
+    yield c.say('amelie', 'AAAAAAAAH !!!', { mood: 'angry' });
+    c.pose('amelie', 'idle'); c.face('amelie', 1);
+    c.sfx('jump'); yield lob(645, BY - 48, 0.5, 20);
+    c.sfx('stomp'); c.shake(0.3); c.sfx('hurt');
+    const o = hand('olivier');
+    yield [fly('bastien', 1130, 1.1), run((function* () { yield lob(o.x - 10, o.y, 0.25, 20); c.sfx('stomp'); yield all([fly('olivier', 1180, 1.1), lob(980, FLOOR_Y - 12, 1.0, 110)]); })())];
+    c.remove('bastien'); c.remove('olivier'); c.unprop(ball);
+    c.mood('amelie', undefined); c.mood('coline', undefined);
     c.emote('coline', '!!', 6); c.emote('amelie', '!!', 6);
     yield [c.walk('coline', 330, 230), c.walk('amelie', 610, 230)];
     yield [c.walk('coline', 470, 230), c.walk('amelie', 560, 230)];
