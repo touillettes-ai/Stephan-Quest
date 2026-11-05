@@ -3134,7 +3134,7 @@ CUTS.j14_bureau = {
     // juste avant la fin : Sheryna passe au-dessus d'eux sur un grand avion en papier
     const SH = Object.assign({}, CHARS.sheryna, { scale: 0.7 });
     const big = c.prop('avion', 1200, 150, { dir: -1, s: 5.2 });
-    const sh = c.add('sheryna', SH, 1200, { y: 150, face: -1, state: 'sit', z: 4 }); sh.rideOn = big; sh.rideDx = 6; sh.rideDy = -7;
+    const sh = c.add('sheryna', SH, 1200, { y: 150, face: -1, state: 'sit', z: 4 }); sh.rideOn = big; sh.rideDx = -14; sh.rideDy = 16;
     c.sfx('jump'); sh.waving = true;
     yield flight(big, 560, 150, 2.4, 0);
     big.hover = 4;
