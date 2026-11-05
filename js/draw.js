@@ -592,6 +592,10 @@ function drawProp(ctx, p, t) {
       ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1.5;
       for (let i = 0; i < 9; i++) { const an = i / 9 * 6.2832 + 0.2; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r * 0.8, y + Math.sin(an) * r * 0.8); ctx.lineTo(x + Math.cos(an) * (r + 26 + hash(i) * 22), y + Math.sin(an) * (r + 26 + hash(i) * 22)); ctx.stroke(); }
       break; }
+    case 'avion':                                 // avion en papier (x,y = centre ; p.dir = 1 vers la droite / -1 vers la gauche ; p.rot = inclinaison)
+      ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1.6); if (p.dir === -1) ctx.scale(-1, 1); ctx.rotate(p.rot || 0);
+      poly(ctx, [[-14, -3], [16, 0], [-14, 6]], '#fdfdfd'); poly(ctx, [[-14, -3], [16, 0], [-3, 1.5]], '#d9e2ee'); poly(ctx, [[-14, 6], [16, 0], [-3, 1.5]], '#eef2f8');
+      ctx.strokeStyle = '#8fa0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-14, -3); ctx.lineTo(16, 0); ctx.lineTo(-14, 6); ctx.closePath(); ctx.moveTo(-3, 1.5); ctx.lineTo(16, 0); ctx.stroke(); ctx.restore(); break;
     case 'eclats':                                // éclats de verre posés au sol (x = centre, y = sol)
       for (let i = 0; i < 22; i++) {
         const dx = (hash(i * 5 + 1) - 0.5) * 150 * (1 - 0.35 * Math.abs(hash(i * 5 + 1) - 0.5) * 2), sz = 4.5 + hash(i * 5 + 2) * 7, an = hash(i * 5 + 3) * 6.28;

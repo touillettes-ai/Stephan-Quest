@@ -791,6 +791,10 @@ function drawProp(ctx, p, t) {
       ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1.5;
       for (let i = 0; i < 9; i++) { const an = i / 9 * 6.2832 + 0.2; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * r * 0.8, y + Math.sin(an) * r * 0.8); ctx.lineTo(x + Math.cos(an) * (r + 26 + hash(i) * 22), y + Math.sin(an) * (r + 26 + hash(i) * 22)); ctx.stroke(); }
       break; }
+    case 'avion':                                 // avion en papier (x,y = centre ; p.dir = 1 vers la droite / -1 vers la gauche ; p.rot = inclinaison)
+      ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1.6); if (p.dir === -1) ctx.scale(-1, 1); ctx.rotate(p.rot || 0);
+      poly(ctx, [[-14, -3], [16, 0], [-14, 6]], '#fdfdfd'); poly(ctx, [[-14, -3], [16, 0], [-3, 1.5]], '#d9e2ee'); poly(ctx, [[-14, 6], [16, 0], [-3, 1.5]], '#eef2f8');
+      ctx.strokeStyle = '#8fa0b8'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-14, -3); ctx.lineTo(16, 0); ctx.lineTo(-14, 6); ctx.closePath(); ctx.moveTo(-3, 1.5); ctx.lineTo(16, 0); ctx.stroke(); ctx.restore(); break;
     case 'eclats':                                // éclats de verre posés au sol (x = centre, y = sol)
       for (let i = 0; i < 22; i++) {
         const dx = (hash(i * 5 + 1) - 0.5) * 150 * (1 - 0.35 * Math.abs(hash(i * 5 + 1) - 0.5) * 2), sz = 4.5 + hash(i * 5 + 2) * 7, an = hash(i * 5 + 3) * 6.28;
@@ -3062,11 +3066,37 @@ CUTS.j14_bureau = {
   script: function* (c) {
     c.prop('eclats', 585, FLOOR_Y);
     seat(c, 'coline', CHARS.coline, 200, 1, true);
-    c.add('bastien', CHARS.bastien, 700, { face: -1 });
-    c.add('olivier', CHARS.olivier, 780, { face: -1 });
+    // Bastien et Olivier, chacun à un bout de la pièce (au fond), se lancent des avions en papier
+    const BY = FLOOR_Y - 24, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 16, y: c.actors[k].y - 52 });
+    c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
+    c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
-    yield c.caption('Le lendemain. Open space.', 2.4);
-    yield c.walk('hero', 380, 120);
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const run = g => { let w = null; return { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = r.value; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; };
+    const flight = (p, x2, y2, dur, h, upTo) => { const x0 = p.x, y0 = p.y, end = upTo || dur; return { t: 0, update(dt) { this.t = Math.min(end, this.t + dt); const k = this.t / dur; p.x = lerp(x0, x2, k); p.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h + Math.sin(k * 14) * 3; p.rot = Math.cos(k * 14) * 0.18; return this.t >= end; } }; };
+    const hopTo = (k, x2, dur, hops, h, carry) => { const a = c.actors[k], x0 = a.x; a.facing = x2 > x0 ? 1 : -1; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = FLOOR_Y - Math.abs(Math.sin(p * hops * Math.PI)) * h; a.state = a.y < FLOOR_Y - 2 ? 'jump' : 'idle'; if (carry) { carry.x = a.x + a.facing * 15; carry.y = a.y - 54; carry.dir = a.facing; carry.rot = 0.3; } if (p >= 1) { a.y = FLOOR_Y; a.state = 'idle'; return true; } return false; } }; };
+    const travel = (k, x2, y2, speed) => { const a = c.actors[k], x0 = a.x, y0 = a.y, dur = Math.abs(x2 - x0) / speed; a.facing = x2 > x0 ? 1 : -1; a.state = 'walk'; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = lerp(y0, y2, p); if (p >= 1) { a.state = 'idle'; return true; } return false; } }; };
+    const toss = function* (from, to, dur) {
+      c.pose(from, 'wave'); const h = hand(from), p = c.prop('avion', h.x, h.y, { front: true, dir: c.actors[from].facing }); c.sfx('blip');
+      yield c.wait(0.25); c.pose(from, 'idle');
+      const e = hand(to); yield flight(p, e.x, e.y, dur, 55); c.unprop(p);
+    };
+    const rally = function* () { yield* toss('bastien', 'olivier', 1.5); yield* toss('olivier', 'bastien', 1.5); };
+    yield [c.caption('Le lendemain. Open space.', 2.4), c.walk('hero', 380, 120), run(rally())];
+    // un troisième avion… Arno arrive en sautant et l'attrape au vol
+    c.face('hero', 1); c.emote('hero', '?', 1.4);
+    c.pose('bastien', 'wave'); const h3 = hand('bastien'), p3 = c.prop('avion', h3.x, h3.y, { front: true, dir: 1 }); c.sfx('blip');
+    c.add('arno', CHARS.arno, 1040, { face: -1 });
+    yield all([flight(p3, 865, 300, 2.2, 55, 1.6), hopTo('arno', 640, 1.6, 3, 40)]);
+    c.pose('bastien', 'idle');
+    p3.x = c.actors.arno.x - 15; p3.y = c.actors.arno.y - 54; p3.dir = -1; p3.rot = 0.3; c.emote('arno', '!', 1.2);
+    yield c.say('arno', "Je l'ai !", { mood: 'laugh' });
+    yield all([hopTo('arno', 1130, 1.8, 4, 36, p3)]);
+    c.remove('arno'); c.unprop(p3);
+    // Bastien rejoint Olivier
+    c.emote('bastien', '!', 1);
+    yield all([travel('bastien', 700, FLOOR_Y, 230), travel('olivier', 780, FLOOR_Y, 130)]);
+    c.actors.bastien.z = 0; c.actors.olivier.z = 0; c.face('bastien', -1); c.face('olivier', -1);
     c.pose('hero', 'wave');
     yield c.say('hero', 'Bonjour tout le monde ! Ma valise et moi sommes enfin arrivés.');
     c.pose('hero', 'idle');

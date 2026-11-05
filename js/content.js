@@ -409,11 +409,37 @@ CUTS.j14_bureau = {
   script: function* (c) {
     c.prop('eclats', 585, FLOOR_Y);
     seat(c, 'coline', CHARS.coline, 200, 1, true);
-    c.add('bastien', CHARS.bastien, 700, { face: -1 });
-    c.add('olivier', CHARS.olivier, 780, { face: -1 });
+    // Bastien et Olivier, chacun à un bout de la pièce (au fond), se lancent des avions en papier
+    const BY = FLOOR_Y - 24, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 16, y: c.actors[k].y - 52 });
+    c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
+    c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
-    yield c.caption('Le lendemain. Open space.', 2.4);
-    yield c.walk('hero', 380, 120);
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const run = g => { let w = null; return { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = r.value; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; };
+    const flight = (p, x2, y2, dur, h, upTo) => { const x0 = p.x, y0 = p.y, end = upTo || dur; return { t: 0, update(dt) { this.t = Math.min(end, this.t + dt); const k = this.t / dur; p.x = lerp(x0, x2, k); p.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h + Math.sin(k * 14) * 3; p.rot = Math.cos(k * 14) * 0.18; return this.t >= end; } }; };
+    const hopTo = (k, x2, dur, hops, h, carry) => { const a = c.actors[k], x0 = a.x; a.facing = x2 > x0 ? 1 : -1; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = FLOOR_Y - Math.abs(Math.sin(p * hops * Math.PI)) * h; a.state = a.y < FLOOR_Y - 2 ? 'jump' : 'idle'; if (carry) { carry.x = a.x + a.facing * 15; carry.y = a.y - 54; carry.dir = a.facing; carry.rot = 0.3; } if (p >= 1) { a.y = FLOOR_Y; a.state = 'idle'; return true; } return false; } }; };
+    const travel = (k, x2, y2, speed) => { const a = c.actors[k], x0 = a.x, y0 = a.y, dur = Math.abs(x2 - x0) / speed; a.facing = x2 > x0 ? 1 : -1; a.state = 'walk'; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = lerp(y0, y2, p); if (p >= 1) { a.state = 'idle'; return true; } return false; } }; };
+    const toss = function* (from, to, dur) {
+      c.pose(from, 'wave'); const h = hand(from), p = c.prop('avion', h.x, h.y, { front: true, dir: c.actors[from].facing }); c.sfx('blip');
+      yield c.wait(0.25); c.pose(from, 'idle');
+      const e = hand(to); yield flight(p, e.x, e.y, dur, 55); c.unprop(p);
+    };
+    const rally = function* () { yield* toss('bastien', 'olivier', 1.5); yield* toss('olivier', 'bastien', 1.5); };
+    yield [c.caption('Le lendemain. Open space.', 2.4), c.walk('hero', 380, 120), run(rally())];
+    // un troisième avion… Arno arrive en sautant et l'attrape au vol
+    c.face('hero', 1); c.emote('hero', '?', 1.4);
+    c.pose('bastien', 'wave'); const h3 = hand('bastien'), p3 = c.prop('avion', h3.x, h3.y, { front: true, dir: 1 }); c.sfx('blip');
+    c.add('arno', CHARS.arno, 1040, { face: -1 });
+    yield all([flight(p3, 865, 300, 2.2, 55, 1.6), hopTo('arno', 640, 1.6, 3, 40)]);
+    c.pose('bastien', 'idle');
+    p3.x = c.actors.arno.x - 15; p3.y = c.actors.arno.y - 54; p3.dir = -1; p3.rot = 0.3; c.emote('arno', '!', 1.2);
+    yield c.say('arno', "Je l'ai !", { mood: 'laugh' });
+    yield all([hopTo('arno', 1130, 1.8, 4, 36, p3)]);
+    c.remove('arno'); c.unprop(p3);
+    // Bastien rejoint Olivier
+    c.emote('bastien', '!', 1);
+    yield all([travel('bastien', 700, FLOOR_Y, 230), travel('olivier', 780, FLOOR_Y, 130)]);
+    c.actors.bastien.z = 0; c.actors.olivier.z = 0; c.face('bastien', -1); c.face('olivier', -1);
     c.pose('hero', 'wave');
     yield c.say('hero', 'Bonjour tout le monde ! Ma valise et moi sommes enfin arrivés.');
     c.pose('hero', 'idle');
