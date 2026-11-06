@@ -446,7 +446,7 @@ CUTS.j14_bureau = {
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 540, 110);
     c.face('hero', 1);
-    yield c.say('chef', 'Stephan. Avant de partir, j\'ai besoin du logigramme de la procédure. Complet.');
+    yield c.say('chef', 'Stephan. Avant de partir, j\'ai besoin du logigramme de la procédure de la procédure de crise. Complet.');
     yield c.say('hero', 'Complet ? Il est tellement grand qu\'il est en morceaux dans tout l\'open space…');
     yield c.say('chef', 'Alors il y a beaucoup de morceaux à retrouver. Bonne chance.');
     c.face('hero', -1);
@@ -470,7 +470,7 @@ CUTS.j14_bureau = {
     const rire = (ks, dur) => ({ t: 0, update(dt) { this.t += dt; for (const k of ks) { const a = c.actors[k]; a.y = FLOOR_Y - Math.abs(Math.sin(this.t * 22 + (k === 'olivier' ? 1.3 : 0))) * 4; } if (this.t >= dur) { for (const k of ks) c.actors[k].y = FLOOR_Y; return true; } return false; } });
     yield all([rire(['bastien', 'olivier'], 1.8), run((function* () { for (let i = 0; i < 5; i++) { c.sfx('blip'); yield c.wait(0.36); } })())]);
     yield c.say('bastien', 'Hihi… un logigramme géant… et un avion dans la tête du Chef… hahaha !', { mood: 'laugh' });
-    yield c.say('olivier', 'Il va falloir courir ! Pfff… haha !', { mood: 'laugh' });
+    yield c.say('olivier', 'Il va falloir courir ! haha !', { mood: 'laugh' });
     c.mood('chef', undefined);
     c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
     // juste avant la fin : Sheryna passe au-dessus d'eux sur un grand avion en papier
@@ -634,6 +634,37 @@ CUTS.j7_crise = {
     yield c.walk('chef', 560, 330);
     c.face('hero', 1); c.emote('chef', '!!', 2);
     yield c.say('chef', 'STEPHAN ! C\'est l\'heure d\'ouvrir une crise !', { mood: 'surprised' });
+    // Cécile, Sandie et Olivier traversent la scène
+    const carry = (k, x2, speed, p) => { const a = c.actors[k]; return { update(dt) { const dx = x2 - a.x, st = speed * dt; if (Math.abs(dx) <= st) { a.x = x2; a.state = 'idle'; } else { a.facing = dx > 0 ? 1 : -1; a.state = 'walk'; a.x += Math.sign(dx) * st; } if (p) { p.x = a.x + a.facing * 14; p.y = a.y - 40; } return Math.abs(x2 - a.x) < 0.5; } }; };
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const logi = c.prop('logi', 1040, FLOOR_Y - 40, { lift: 0, scale: 1.3, front: true });
+    c.add('cecile', CHARS.cecile, 1040, { face: -1, state: 'walk' });
+    yield carry('cecile', 760, 130, logi);
+    c.face('cecile', -1);
+    yield c.say('cecile', "Je vais relire le logigramme de crise, maintenant qu'il est en un seul bout.");
+    c.add('sandie', CHARS.sandie, -60, { face: 1, state: 'walk' }); c.mood('sandie', 'sad');
+    yield all([carry('cecile', 1130, 130, logi), carry('sandie', 440, 270)]);          // Cécile repart, Sandie arrive en courant, l'air triste
+    c.unprop(logi); c.remove('cecile');
+    c.face('sandie', 1);
+    yield c.say('sandie', "Encore une pluie d'ECAB à gérer…", { mood: 'sad' });
+    c.add('olivier', CHARS.olivier, 1040, { face: -1, state: 'walk' });
+    yield c.walk('olivier', 660, 150);
+    c.face('olivier', -1);
+    yield c.say('olivier', "J'ai pas encore les ECAB dans le nouveau Workflow… Il va falloir faire à l'ancienne.");
+    // Olivier rigole, Sandie pleure
+    c.pose('olivier', 'cheer'); c.mood('olivier', 'laugh'); c.emote('olivier', 'HA', 2.2); c.emote('sandie', 'T_T', 2.2);
+    const pleure = dur => ({ t: 0, tt: 0, update(dt) {
+      this.t += dt; this.tt += dt; const o = c.actors.olivier, sa = c.actors.sandie;
+      o.y = FLOOR_Y - Math.abs(Math.sin(this.t * 18)) * 3; sa.y = FLOOR_Y - Math.abs(Math.sin(this.t * 9)) * 1.5;
+      if (this.tt > 0.16) { this.tt = 0; c.burst(sa.x + 6, sa.y - 62, 3, ['#7ad0ff', '#d6efff'], 80); c.sfx('blip'); }
+      if (this.t >= dur) { o.y = FLOOR_Y; sa.y = FLOOR_Y; return true; } return false; } });
+    yield pleure(2.2);
+    c.pose('olivier', 'idle'); c.mood('olivier', undefined);
+    // chacun repart de son côté, et la scène continue
+    c.face('sandie', -1);
+    yield all([carry('sandie', -120, 210), carry('olivier', 1130, 150)]);
+    c.remove('sandie'); c.remove('olivier');
+    c.face('chef', -1);
     yield c.say('chef', 'Nos serveurs sont tous compromis à cause de la CVE-2026-3569-8569 !', { mood: 'surprised' });
     yield c.say('hero', 'Une crise cyber… à quelques jours de ma retraite. Évidemment.');
     yield c.say('chef', 'Va chercher les membres de la cyber, la mallette de crise et Bastien, puis rejoins-moi en salle Mozart !');
