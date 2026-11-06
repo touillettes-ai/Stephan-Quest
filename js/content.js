@@ -24,7 +24,7 @@ const CONFIG = {
    options   : glasses, mustache, beard, tie, vest, scale                */
 const CHARS = {
   // ---- Le héros ----
-  hero:     { name: CONFIG.hero, skin: '#f0c8a0', hair: '#e8e8e8', hairStyle: 'short', top: '#f4f4f4', stripes: '#2f6db5', collar: '#2f6db5', bottom: '#2c3440', badge: '#d6402f' },
+  hero:     { name: CONFIG.hero, skin: '#efb896', hair: '#e8e8e8', hairStyle: 'swept', brow: '#aeaeae', grin: true, wrinkles: true, jowls: true, ruddy: true, top: '#f4f4f4', stripes: '#2f6db5', collar: '#2f6db5', bottom: '#2c3440', badge: '#d6402f' },
   // ---- Le Chef (grand, chauve, chemise) ----
   chef:     { name: 'Le Chef', skin: '#e8b890', hair: '#6b5a4a', hairStyle: 'bald', top: '#bcd4ea', collar: '#ffffff', bottom: '#2c3440', scale: 1.15, pocket: true, badge: '#2f7fd1' },
   // ---- Delivery Team (nom, métier) ----
