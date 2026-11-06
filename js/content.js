@@ -536,31 +536,81 @@ CUTS.j9_choix = {
   },
 };
 
-function okiTable(c) {
+function okiTable(c, withSandie) {
   c.prop('table', 480, FLOOR_Y, { color: '#7a4a2a', plates: [-30, 0, 30], front: true });
-  diner(c, 'hero', CHARS.hero, 290, 1); diner(c, 'sandie', CHARS.sandie, 340, 1); diner(c, 'sheryna', CHARS.sheryna, 390, 1);
+  diner(c, 'hero', CHARS.hero, 290, 1); if (withSandie !== false) diner(c, 'sandie', CHARS.sandie, 340, 1); diner(c, 'sheryna', CHARS.sheryna, 390, 1);
   diner(c, 'danila', CHARS.danila, 570, -1); diner(c, 'amelie', CHARS.amelie, 620, -1);
 }
 
 CUTS.j9_japonais = {
   type: 'cutscene', bg: 'japonais',
   script: function* (c) {
+    // les serveurs : Bastien et Olivier en tenue de service (chemise blanche, nœud papillon)
+    const SERV = k => Object.assign({}, CHARS[k], { top: '#f6f6f6', bottom: '#1c2230', tie: '#c0392b' });
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const lob = (p, x2, y2, dur, h) => { const x0 = p.x, y0 = p.y; return { t: 0, update(dt) { this.t += dt; const k = Math.min(1, this.t / dur); p.x = lerp(x0, x2, k); p.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h; return k >= 1; } }; };
+    // marche en portant un objet à la main
+    const walkCarry = (k, x2, speed, p) => { const a = c.actors[k]; return { update(dt) { const dx = x2 - a.x, st = speed * dt; if (Math.abs(dx) <= st) { a.x = x2; a.state = 'idle'; } else { a.facing = dx > 0 ? 1 : -1; a.state = 'walk'; a.x += Math.sign(dx) * st; } if (p) { p.x = a.x + a.facing * 14; p.y = a.y - 38; } return Math.abs(x2 - a.x) < 0.5; } }; };
+    // roue / saut périlleux : x avance, y décrit un arc, le personnage tourne sur lui-même
+    const tumble = (k, x2, dur, turns, h) => { const a = c.actors[k], x0 = a.x; a.state = 'jump'; a.facing = x2 > x0 ? 1 : -1; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = FLOOR_Y - Math.abs(Math.sin(p * Math.PI * turns)) * h; a.rot = p * turns * 6.2832 * a.facing; if (p >= 1) { a.y = FLOOR_Y; a.rot = 0; return true; } return false; } }; };
+    const cri = (ks, on) => { for (const k of ks) { c.actors[k].talking = on; c.actors[k].waving = on; } };
     yield c.caption('Hoki Sushi.', 2.2);
     okiTable(c);
-    yield c.say('danila', 'Alors, tout le monde a choisi ? Moi, ce sera trois makis et des brochettes.');
-    yield c.say('amelie', 'Moi : sushis. Beaucoup de sushis. Et je ne partage pas.');
-    yield c.say('sheryna', 'Pareil. Stephan, tu prends quoi ?');
-    yield c.say('sandie', 'Ton avant-dernier déjeuner avec nous, il faut marquer le coup !');
-    c.emote('hero', '♥', 1.5);
-    yield c.say('hero', 'Un peu de tout. Aujourd\'hui, c\'est moi qui régale !');
-    yield c.say(null, 'Mais le tapis roulant déborde… Il faut aller chercher les plats soi-même.');
+    yield c.say('hero', "Alors, tout le monde a choisi ce qu'il veut manger ?");
+    const groupe = ['sandie', 'sheryna', 'danila', 'amelie'];
+    cri(groupe, true);
+    yield c.say('danila', 'OUIIIIIIIII !', { name: 'Tout le monde', mood: 'laugh' });
+    cri(groupe, false);
+    // Stephan appelle le serveur… et c'est Bastien qui arrive
+    c.actors.hero.waving = true;
+    yield c.say('hero', "S'il vous plaît ! Serveur !");
+    c.add('bastien', SERV('bastien'), 1020, { face: -1, state: 'walk' });
+    yield c.walk('bastien', 700, 140);
+    c.actors.hero.waving = false;
+    yield c.say('bastien', 'Je peux prendre votre commande ?');
+    c.emote('hero', '!!', 1.6); c.mood('hero', 'surprised');
+    yield c.say('hero', "Bastien ?! Mais qu'est-ce que tu fais là ?!", { mood: 'surprised' });
+    c.mood('hero', undefined);
+    yield c.say('bastien', "Je bosse ici le mardi midi pour payer un panier et un ballon de basket pour l'équipe.");
+    yield c.say('hero', 'Ok…');
+    yield c.say('bastien', 'Alors, vous mangez quoi ?');
+    yield c.say('danila', 'Un menu B4 et une paire de brochettes Bœuf Fromage.');
+    yield c.say('amelie', 'Un menu C4 et deux paires de brochettes Poulet.');
+    yield c.say('sheryna', "Je vais vous prendre le Menu Trop Mims avec un maki Saumon, un Figatellu et le jouet, s'il vous plaît.");
+    // Sandie doit filer : debout, roue, puis saut périlleux
+    yield c.say('sandie', "Changement de programme : j'ai des ECAB à valider, je dois vous laisser en urgence !", { mood: 'surprised' });
+    const sa = c.actors.sandie; sa.z = 3; c.pose('sandie', 'idle'); c.face('sandie', -1); c.sfx('jump');
+    yield tumble('sandie', 190, 1.1, 2, 46);
+    c.sfx('jump'); c.sfx('win');
+    yield tumble('sandie', -150, 1.0, 1, 130);
+    c.remove('sandie');
+    yield c.say('hero', 'Wahou, elle est balèze la Didie !', { mood: 'surprised' });
+    yield c.say('bastien', "C'est tout bon, merci.");
+    // Olivier arrive avec la pinte de Danila
+    const pinte = c.prop('biere', 1020, FLOOR_Y - 38, { lift: 0, scale: 1.3, front: true });
+    c.add('olivier', SERV('olivier'), 1020, { face: -1, state: 'walk' });
+    yield walkCarry('olivier', 655, 150, pinte);
+    c.face('olivier', -1);
+    yield c.say('olivier', "Danila, tu as oublié de commander tes pintes ! Mais je te la ramène direct.");
+    c.pose('olivier', 'wave'); c.sfx('blip');
+    yield lob(pinte, 560, FLOOR_Y - 52, 0.7, 40);
+    c.pose('olivier', 'idle'); c.pose('danila', 'cheer'); c.sfx('coin');
+    yield c.wait(0.8);
+    c.pose('danila', 'sit');
+    // les deux serveurs repartent
+    yield all([c.walk('bastien', 1130, 140), c.walk('olivier', 1170, 140)]);
+    c.remove('bastien'); c.remove('olivier');
+    c.face('hero', 1); c.mood('hero', 'sad');
+    yield c.say('hero', "Avec les deux gugus, on n'est pas près d'être servis… Je vais nous chercher nos commandes !");
+    c.mood('hero', undefined);
+    yield c.say(null, "La commande est passée, mais vu les deux zigotos qui sont au service, il faut aller chercher les commandes dans le restaurant.");
   },
 };
 
 CUTS.j9_outro = {
   type: 'cutscene', bg: 'japonais',
   script: function* (c) {
-    okiTable(c);
+    okiTable(c, false);          // Sandie est partie valider ses ECAB
     c.prop('maki', 450, FLOOR_Y - 46, { lift: 0 }); c.prop('sushi', 510, FLOOR_Y - 46, { lift: 0 });
     yield c.say('amelie', 'Ces sushis sont… (mâche) …légendaires.');
     c.pose('danila', 'cheer');
