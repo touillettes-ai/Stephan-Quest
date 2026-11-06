@@ -1163,7 +1163,7 @@ CUTS.fete_intro = {
     const X = {}; for (const [k, x] of FETE_GUESTS) X[k] = x;
     const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
     const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
-    const arc = (k, x2, y2, dur, h) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; }); };
+    const arc = (k, x2, y2, dur, h, rot) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; a.rot = (rot || 0) * u; }); };
     const enter = (k) => { const l = X[k] < 480; c.add(k, CHARS[k], l ? -70 : 1030, { face: l ? 1 : -1, state: 'walk' }); return c.walk(k, X[k], 150); };
     const arrive = function* (k, text) { yield enter(k); c.face(k, X[k] < 480 ? 1 : -1); if (text) yield c.say(k, text); };
     // ---- Bastien et Olivier jouent aux billes en rigolant ----
@@ -1188,17 +1188,30 @@ CUTS.fete_intro = {
     c.pose('hero', 'wave'); c.face('bastien', -1); c.face('olivier', -1);
     yield c.say('hero', 'Coucou les petits loups !');
     c.pose('hero', 'idle');
-    yield c.walk('hero', 725, 120);
-    const bou = c.prop('bille', 758, FLOOR_Y, { r: 26, c: '#2f7fd1' }); c.sfx('pop');
-    yield c.say('hero', 'Je peux jouer avec vous ?');
-    c.emote('bastien', '!!', 1.6); c.emote('olivier', '!!', 1.6);
-    yield c.say('bastien', 'Waouh ! Elle est énorme, ta boule !', { name: 'Bastien et Olivier', mood: 'surprised' });
+    yield c.walk('hero', 765, 120);
     play.on = false; c.unprop(bille);
-    yield tween(0.7, u => { bou.x = lerp(758, 836, u); bou.ang = u * 9; });
-    c.sfx('stomp'); c.shake(0.3); c.burst(838, FLOOR_Y - 8, 36, ['#e8433a', '#2f7fd1', '#f2c230', '#3aa65a', '#b04ad1'], 320);
-    c.pose('hero', 'cheer'); c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer'); c.emote('bastien', 'WAOUH', 2); c.emote('olivier', 'WAOUH', 2);
-    yield c.wait(1.6);
-    c.unprop(bou); c.pose('hero', 'idle'); c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
+    const bat = c.prop('batte', 779, FLOOR_Y - 40, { front: true, rot: -0.5 }); c.sfx('pop');
+    yield c.say('hero', 'Je peux jouer avec vous ?');
+    c.emote('bastien', '?', 1.4); c.emote('olivier', '?', 1.4);
+    yield c.wait(0.9);
+    yield tween(0.45, u => { bat.rot = -0.5 - u * 0.5; });
+    c.sfx('jump'); yield tween(0.18, u => { bat.rot = -1 + u * 3; });
+    c.sfx('stomp'); c.shake(0.5); c.burst(815, FLOOR_Y - 60, 30, ['#ffd23f', '#ffffff', '#ff8a3f'], 380);
+    c.burst(838, FLOOR_Y - 8, 36, ['#e8433a', '#2f7fd1', '#f2c230', '#3aa65a', '#b04ad1'], 320);
+    c.pose('hero', 'cheer'); c.pose('bastien', 'hurt'); c.pose('olivier', 'hurt');
+    c.emote('bastien', 'OUILLE', 0); c.emote('olivier', 'AÏE', 0); c.sfx('hurt');
+    yield [arc('bastien', 1150, -220, 1.2, 60, 9), arc('olivier', 1280, -260, 1.4, 70, -9)];
+    c.remove('bastien'); c.remove('olivier'); c.unprop(bat);
+    yield c.wait(0.4); c.pose('hero', 'idle');
+    yield c.say('hero', 'Hihi… Je crois que j\'ai encore un peu de force !', { mood: 'laugh' });
+    // ils reviennent en courant et en rigolant
+    c.add('bastien', CHARS.bastien, 1040, { face: -1, state: 'walk' }); c.add('olivier', CHARS.olivier, 1110, { face: -1, state: 'walk' });
+    c.emote('bastien', 'OUILLE', 0); c.emote('olivier', 'AÏE', 0);
+    yield [c.walk('bastien', 810, 330), c.walk('olivier', 865, 330)];
+    c.face('bastien', -1); c.face('olivier', -1); c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer');
+    yield c.say('olivier', 'Il a de la force, papi !', { mood: 'laugh' });
+    yield c.say('bastien', 'M\'en parle pas…', { mood: 'laugh' });
+    c.emote('bastien', null); c.emote('olivier', null); c.pose('hero', 'idle'); c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
     yield c.walk('hero', 480, 150);
     c.confetti(60); c.pose('hero', 'wave');
     // ---- chacun arrive et dit sa phrase gentille ----
