@@ -879,7 +879,7 @@ function drawProp(ctx, p, t) {
     case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
       line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
     case 'coupe': {                               // coupe du vainqueur (x,y = centre), p.scale
-      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0); ctx.scale(sc, sc);
       rr(ctx, -9, 12, 18, 5, 2, '#8a5a1a'); rect(ctx, -2, 4, 4, 9, '#e0a820'); poly(ctx, [[-11, -14], [11, -14], [8, 2], [-8, 2]], '#ffd23f');
       ctx.strokeStyle = '#e0a820'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-12, -8, 5, 1.6, 4.7); ctx.arc(12, -8, 5, -1.6, 1.5); ctx.stroke();
       rect(ctx, -6, -12, 3, 9, 'rgba(255,255,255,.55)'); ctx.restore(); break; }
@@ -3363,7 +3363,7 @@ CUTS.j9_choix = {
     c.prop('chair', 66, FLOOR_Y, { z: -1 }); c.prop('desk', 106, FLOOR_Y, { front: true });
     c.prop('desk', 860, FLOOR_Y, {});
     // ---- Arno, Sandie, Bastien et Olivier jouent à 1, 2, 3 soleil (Olivier compte, face au mur) ----
-    const X0 = { arno: 470, sandie: 520, bastien: 570 }, LIM = 845;
+    const X0 = { arno: 300, sandie: 350, bastien: 400 }, LIM = 845;
     for (const k in X0) c.add(k, CHARS[k], X0[k], { face: 1 });
     c.add('olivier', CHARS.olivier, 925, { face: 1 });
     const gm = { finish: false, out: {}, stop: {} };
@@ -3387,7 +3387,7 @@ CUTS.j9_choix = {
     yield c.wait(4.2);
     // ---- Stephan arrive ----
     c.add('hero', CHARS.hero, -60, { face: 1, state: 'walk' });
-    yield c.walk('hero', 330, 130);
+    yield c.walk('hero', 200, 130);
     c.emote('hero', '?', 1.2);
     yield c.say('hero', 'Vous faites quoi encore ?');
     yield c.say('arno', 'Un, deux, trois, soleil ! Ça se voit pas ?', { name: 'Tout le monde', mood: 'laugh' });
@@ -3427,14 +3427,19 @@ CUTS.j9_choix = {
     c.pose('sandie', 'cheer'); c.sfx('win'); c.confetti(40);
     const cup = c.prop('coupe', 900, FLOOR_Y - 84, { scale: 1.2, front: true });
     yield c.say('sandie', "Pour une fois que c'est moi qui gagne à un 1, 2, 3 soleil ! Vivement que je gagne une partie de chat !", { mood: 'laugh' });
-    c.pose('sandie', 'idle'); c.unprop(cup);
+    c.pose('sandie', 'idle');
     // ---- Stephan soupire et sort en touchant Arno ----
     c.emote('hero', 'Pfff…', 1.8); hero.state = 'idle'; yield c.wait(1.6);
     yield c.walk('hero', c.actors.arno.x - 28, 150);
     c.emote('arno', '!', 1); c.sfx('blip');
     yield c.say('hero', "C'est toi le chat !");
-    exit('hero', 1100, 160);
-    exit('sandie', -100, 230);
+    exit('hero', -100, 170);                              // Stephan repart dans l'autre sens (vers la gauche)
+    // Sandie lance sa coupe vers Arno… elle passe largement au-dessus, puis Sandie file dans l'autre sens
+    c.face('sandie', -1); c.pose('sandie', 'cheer'); yield c.wait(0.5);
+    const cx0 = cup.x, cy0 = cup.y; c.sfx('jump'); c.pose('sandie', 'idle');
+    yield tween(1.5, u => { cup.x = lerp(cx0, -90, u); cup.y = lerp(cy0, FLOOR_Y - 150, u) - Math.sin(u * Math.PI) * 210; cup.rot = u * 22; });
+    c.unprop(cup); c.emote('sandie', 'Oups !', 1.4); c.emote('arno', 'Raté !', 1.4); yield c.wait(1.0);
+    c.face('sandie', 1); exit('sandie', 1100, 240);
     c.face('arno', 1); c.pose('arno', 'idle');
     // ---- la chasse : Bastien et Olivier ----
     yield c.walk('arno', Math.max(c.actors.arno.x + 40, c.actors.bastien.x - 70), 210);

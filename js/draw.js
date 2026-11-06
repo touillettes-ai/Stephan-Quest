@@ -680,7 +680,7 @@ function drawProp(ctx, p, t) {
     case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
       line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
     case 'coupe': {                               // coupe du vainqueur (x,y = centre), p.scale
-      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0); ctx.scale(sc, sc);
       rr(ctx, -9, 12, 18, 5, 2, '#8a5a1a'); rect(ctx, -2, 4, 4, 9, '#e0a820'); poly(ctx, [[-11, -14], [11, -14], [8, 2], [-8, 2]], '#ffd23f');
       ctx.strokeStyle = '#e0a820'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-12, -8, 5, 1.6, 4.7); ctx.arc(12, -8, 5, -1.6, 1.5); ctx.stroke();
       rect(ctx, -6, -12, 3, 9, 'rgba(255,255,255,.55)'); ctx.restore(); break; }
