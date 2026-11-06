@@ -666,11 +666,11 @@ function drawProp(ctx, p, t) {
     case 'twingo': {                              // Twingo jaune, regarde à droite (p.face = -1 pour l'inverser)
       ctx.save(); if (p.face === -1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
       const by = y - (p.moving ? Math.abs(Math.sin(t * 22)) * 1.6 : 0);
-      rr(ctx, x - 66, by - 36, 132, 24, 8, '#f2c230', '#a9801b', 2);
-      poly(ctx, [[x - 38, by - 36], [x - 26, by - 66], [x + 22, by - 66], [x + 44, by - 36]], '#f2c230', '#a9801b', 2);
+      rr(ctx, x - 66, by - 36, 132, 24, 8, (p.col || '#f2c230'), '#2c6a3a', 2);
+      poly(ctx, [[x - 38, by - 36], [x - 26, by - 66], [x + 22, by - 66], [x + 44, by - 36]], (p.col || '#f2c230'), '#2c6a3a', 2);
       ctx.globalAlpha = 0.4; poly(ctx, [[x - 31, by - 40], [x - 22, by - 61], [x + 18, by - 61], [x + 36, by - 40]], '#bfe3f5'); ctx.globalAlpha = 1;
-      line(ctx, x - 2, by - 61, x - 2, by - 40, '#f2c230', 3);
-      circ(ctx, x + 59, by - 27, 4.5, '#fff6c0', '#a9801b', 1); rect(ctx, x - 66, by - 30, 5, 8, '#c0392b'); rect(ctx, x - 68, by - 16, 136, 4, '#555');
+      line(ctx, x - 2, by - 61, x - 2, by - 40, (p.col || '#f2c230'), 3);
+      circ(ctx, x + 59, by - 27, 4.5, '#fff6c0', '#2c6a3a', 1); rect(ctx, x - 66, by - 30, 5, 8, '#c0392b'); rect(ctx, x - 68, by - 16, 136, 4, '#555');
       for (const wx of [-40, 42]) { circ(ctx, x + wx, by - 11, 13, '#222'); circ(ctx, x + wx, by - 11, 6, '#b8b8b8'); }
       ctx.restore(); break; }
     case 'parachute': {                           // voile de parachute au-dessus du point (x,y = pieds du personnage)

@@ -1238,7 +1238,7 @@ CUTS.fete_intro = {
     yield c.say('sheryna', 'Pile à l\'heure !', { mood: 'laugh' });
     yield c.say('sheryna', 'Avec toi, tout finit par s\'arranger. C\'est un super don.');
     // ---- Sandie arrive en Twingo avec Imen et Amélie ----
-    const car = c.prop('twingo', -170, FLOOR_Y - 6, { moving: true, front: true });
+    const car = c.prop('twingo', -170, FLOOR_Y - 6, { moving: true, front: true, col: '#3aa65a' });
     c.add('sandie', CHARS.sandie, -170, { face: 1, state: 'sit' }); c.add('imen', CHARS.imen, -170, { face: 1, state: 'sit' }); c.add('amelie', CHARS.amelie, -170, { face: 1, state: 'sit' });
     const sit = (k, dx) => { const a = c.actors[k]; a.rideOn = car; a.rideDx = dx; a.rideDy = -12; a.z = 1; };
     sit('sandie', 24); sit('imen', -8); sit('amelie', -38);
@@ -1255,15 +1255,11 @@ CUTS.fete_intro = {
     c.remove('sandie'); c.unprop(car);
     yield c.wait(1.6);
     // ---- elle revient : pause technique aux toilettes ----
-    const car2 = c.prop('twingo', 1300, FLOOR_Y - 6, { moving: true, face: -1, front: true });
-    c.add('sandie', CHARS.sandie, 1300, { face: -1, state: 'sit' });
-    const sa = c.actors.sandie; sa.rideOn = car2; sa.rideDx = -24; sa.rideDy = -12; sa.z = 1;
-    c.sfx('spring'); yield tween(2.2, u => { car2.x = lerp(1300, 700, 1 - (1 - u) * (1 - u)); });
-    car2.moving = false; c.sfx('blip');
+    c.add('sandie', CHARS.sandie, 1060, { face: -1, state: 'walk' });
+    const sa = c.actors.sandie;
+    yield c.walk('sandie', 650, 200);
     c.emote('sandie', '!', 1.4);
     yield c.say('sandie', 'Oups… pause technique !', { mood: 'surprised' });
-    sa.rideOn = null; sa.state = 'idle'; sa.z = 0; c.sfx('jump');
-    yield arc('sandie', 650, FLOOR_Y, 0.5, 40); sa.y = FLOOR_Y;
     yield c.walk('sandie', 508, 230);
     c.sfx('door'); c.remove('sandie');
     yield c.wait(1.8);
