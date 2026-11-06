@@ -522,7 +522,7 @@ CUTS.j9_choix = {
     c.prop('chair', 66, FLOOR_Y, { z: -1 }); c.prop('desk', 106, FLOOR_Y, { front: true });
     c.prop('desk', 860, FLOOR_Y, {});
     // ---- Arno, Sandie, Bastien et Olivier jouent à 1, 2, 3 soleil (Olivier compte, face au mur) ----
-    const X0 = { arno: 660, sandie: 705, bastien: 750 }, LIM = 845;
+    const X0 = { arno: 470, sandie: 520, bastien: 570 }, LIM = 845;
     for (const k in X0) c.add(k, CHARS[k], X0[k], { face: 1 });
     c.add('olivier', CHARS.olivier, 925, { face: 1 });
     const gm = { finish: false, out: {}, stop: {} };
@@ -537,7 +537,7 @@ CUTS.j9_choix = {
           yield c.wait(0.35); c.emote('arno', '!', 1.2);
           for (const k of act) if (k !== 'arno') c.pose(k, 'idle');
           yield c.wait(0.3); c.pose('arno', 'idle'); c.emote('olivier', 'Arno a bougé !', 1.6); c.emote('arno', 'Zut !', 1.6); gm.out.arno = true;
-          yield c.wait(1.2); c.face('arno', -1); yield c.walk('arno', 625, 90); c.face('arno', 1); c.pose('arno', 'idle');
+          yield c.wait(1.2); c.face('arno', -1); yield c.walk('arno', X0.arno - 30, 90); c.face('arno', 1); c.pose('arno', 'idle');
         } else { for (const k of act) c.pose(k, 'idle'); yield c.wait(1.3); }
       }
       for (const k of ['sandie', 'bastien']) c.pose(k, 'idle');
@@ -546,7 +546,7 @@ CUTS.j9_choix = {
     yield c.wait(4.2);
     // ---- Stephan arrive ----
     c.add('hero', CHARS.hero, -60, { face: 1, state: 'walk' });
-    yield c.walk('hero', 470, 130);
+    yield c.walk('hero', 330, 130);
     c.emote('hero', '?', 1.2);
     yield c.say('hero', 'Vous faites quoi encore ?');
     yield c.say('arno', 'Un, deux, trois, soleil ! Ça se voit pas ?', { name: 'Tout le monde', mood: 'laugh' });
@@ -589,14 +589,14 @@ CUTS.j9_choix = {
     c.pose('sandie', 'idle'); c.unprop(cup);
     // ---- Stephan soupire et sort en touchant Arno ----
     c.emote('hero', 'Pfff…', 1.8); hero.state = 'idle'; yield c.wait(1.6);
-    yield c.walk('hero', 598, 150);
+    yield c.walk('hero', c.actors.arno.x - 28, 150);
     c.emote('arno', '!', 1); c.sfx('blip');
     yield c.say('hero', "C'est toi le chat !");
     exit('hero', 1100, 160);
     exit('sandie', -100, 230);
     c.face('arno', 1); c.pose('arno', 'idle');
     // ---- la chasse : Bastien et Olivier ----
-    yield c.walk('arno', 705, 210);
+    yield c.walk('arno', Math.max(c.actors.arno.x + 40, c.actors.bastien.x - 70), 210);
     c.pose('bastien', 'idle'); const bx = c.actors.bastien.x;
     c.sfx('jump'); yield arc('bastien', c.actors.arno.x - 60, FLOOR_Y, 0.6, 90);
     c.pose('bastien', 'cheer'); exit('bastien', -100, 240);
