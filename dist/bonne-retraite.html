@@ -3473,6 +3473,16 @@ CUTS.j9_choix = {
     yield arc('olivier', 880, FLOOR_Y, 0.7, 14);
     c.emote('olivier', 'fiu fiu~', 4); c.face('olivier', 1);
     yield c.walk('olivier', 1100, 70);
+    // ---- à peine sorti, Olivier revient en courant, poursuivi par Coline et Arno ----
+    c.face('olivier', -1); c.pose('olivier', 'walk'); c.emote('olivier', 'AAAH !', 3.5); c.sfx('spring');
+    c.add('coline', CHARS.coline, 1200, { face: -1, state: 'walk' }); c.add('arno', CHARS.arno, 1290, { face: -1, state: 'walk' });
+    c.spawn((function* () { yield c.walk('olivier', -160, 320); c.remove('olivier'); })());
+    c.spawn((function* () { yield c.walk('coline', -160, 308); c.remove('coline'); })());
+    c.spawn((function* () { yield c.walk('arno', -160, 300); c.remove('arno'); })());
+    yield c.wait(1.5);
+    yield c.say('arno', "Reviens ici, on va t'avoir !", { name: 'Coline et Arno', mood: 'angry' });
+    while (c.actors.arno) yield frame1();
+    yield c.wait(0.4);
     yield c.fade(1, 0.6);
   },
 };
