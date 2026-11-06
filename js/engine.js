@@ -125,7 +125,7 @@ class CutScene {
   enter() {
     this.t = 0; this.bg = this.def.bg || 'openspace'; this.theme = this.def.theme || this.bg; this.worldW = this.def.worldW || W;
     this.cam = 0; this.follow = null; this.actors = {}; this.props = []; this.dlg = null; this.caption = null; this.card = null;
-    this.black = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
+    this.bgw = []; this.black = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
     this.api = this.makeApi();
     this.gen = this.def.script(this.api);
     this.advance();
@@ -204,6 +204,9 @@ class CutScene {
       /* --- accessoires --- */
       prop(kind, x, y, o) { const p = Object.assign({ kind, x, y: y === undefined ? FLOOR_Y : y }, o || {}); S.props.push(p); return p; },
       unprop(p) { S.props = S.props.filter(q => q !== p); },
+      /* --- tâches de fond : un générateur qui tourne en parallèle du scénario (ex. une partie de pétanque) --- */
+      spawn(g) { let w = null; const task = { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = S.normalize(r.value); if (!w) continue; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; S.bgw.push(task); return task; },
+      time() { return S.t; },
       /* --- temps --- */
       wait(sec) { return { t: 0, update(dt) { this.t += dt; return this.t >= sec; } }; },
     };
@@ -216,6 +219,7 @@ class CutScene {
     updateParticles(this.parts, dt);
     for (const k in this.actors) { const a = this.actors[k]; if (a.rideOn) { a.x = a.rideOn.x + (a.rideDx || 0); a.y = a.rideOn.y + (a.rideDy || 0) + (a.rideOn.hover ? Math.sin(this.t * 3) * a.rideOn.hover : 0); } }          // a.rideOn = un accessoire qui porte le personnage (ex. un avion en papier)
     if (this.follow) this.cam = lerp(this.cam, clamp(this.follow.x - W / 2, 0, Math.max(0, this.worldW - W)), Math.min(1, dt * 3));
+    if (this.bgw.length) this.bgw = this.bgw.filter(w => !w.update(dt));
     if (this.waiter && this.waiter.update(dt)) { this.waiter = null; this.advance(); }
   }
   draw(ctx) {
@@ -228,7 +232,7 @@ class CutScene {
     ctx.translate(-cam, 0);
     for (const p of this.props) if (!p.front) drawProp(ctx, p, this.t);
     const list = Object.values(this.actors).sort((a, b) => a.z - b.z);
-    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot, waving: a.waving });
+    for (const a of list) drawCharacter(ctx, a.ch, a.x, a.y, { facing: a.facing, state: a.state, t: a.t, talking: a.talking, emote: a.emote, mood: a.mood, squash: a.squash, rot: a.rot, waving: a.waving, typing: a.typing });
     for (const p of this.props) if (p.front) drawProp(ctx, p, this.t);
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);

@@ -697,7 +697,7 @@ CUTS.j7_mozart = {
     c.actors.bastien.y = FLOOR_Y; c.pose('bastien', 'idle'); c.face('bastien', -1);
     yield c.walk('hero', 330, 140); c.face('hero', 1);
     yield c.say('hero', 'Bastien… comment t\'as géré ça ?');
-    yield c.say('bastien', 'Je les ai charmés avec mon déhanché.');
+    yield c.say('bastien', 'J\'applique le nouveau Process présenté au Codir.');
     c.add('hakim', CHARS.hakim, 1020, { face: -1, state: 'walk' });
     yield c.walk('hakim', 700, 200);
     c.face('bastien', 1);
@@ -715,26 +715,52 @@ CUTS.j7_mozart = {
 CUTS.j5_choix = {
   type: 'cutscene', bg: 'openspace',
   script: function* (c) {
-    const cast = ['hero', 'coline', 'amelie', 'sheryna', 'youssef', 'imen', 'cecile', 'franck', 'danila', 'hakim', 'matthieu', 'arno', 'justine', 'sandie', 'bastien', 'olivier'];
-    cast.forEach((k, i) => c.add(k, CHARS[k], 50 + i * 50, { face: i < 8 ? 1 : -1, state: 'idle' }));
-    yield c.caption('Vendredi midi. Open space.', 2.4);
-    c.pose('hero', 'wave');
-    yield c.say('hero', 'On mange où, les loulous ? On revote !');
-    c.pose('hero', 'idle');
-    yield c.wait(0.4);
-    const votes = { amelie: 'Charlie\'s', sheryna: 'Charlie\'s', youssef: 'Charlie\'s', imen: 'Charlie\'s', hakim: 'Charlie\'s', justine: 'Charlie\'s',
-      sandie: 'Charlie\'s', bastien: 'Charlie\'s', matthieu: 'Charlie\'s', olivier: 'Charlie\'s', arno: 'Charlie\'s',
-      danila: 'Hoki Sushi', cecile: 'Hoki Sushi', franck: 'Cantine', coline: 'Cantine' };
-    for (const k in votes) { c.pose(k, 'wave'); c.emote(k, votes[k], 3.6); }     // tous votent en même temps, main levée
-    c.sfx('coin');
-    yield c.wait(3.8);
-    for (const k in votes) c.pose(k, 'idle');                                    // main baissée
-    yield c.wait(0.5);
-    c.pose('hero', 'cheer'); c.sfx('win');
-    yield c.say('hero', 'Charlie\'s l\'emporte à une large majorité ! Parfait !');
-    c.pose('hero', 'idle');
-    yield c.say('hero', 'Je mange avec Sandie, Bastien, Matthieu, Olivier et Arno. Les autres, à la prochaine !');
-    yield c.say(null, 'Direction Charlie\'s, le temple de l\'entrecôte.');
+    const lob = (p, x2, y2, dur, h) => { const x0 = p.x, y0 = p.y; return { t: 0, update(dt) { this.t += dt; const k = Math.min(1, this.t / dur); p.x = lerp(x0, x2, k); p.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h; return k >= 1; } }; };
+    const beat = sec => ({ t: 0, update(dt) { this.t += dt; return this.t >= sec || Input.confirm(); } });          // pause qu'on peut passer avec Entrée
+    // à gauche : Coline et Stephan, chacun à son bureau, ils tapent sur leur clavier
+    seat(c, 'coline', CHARS.coline, 70, 1, true); seat(c, 'hero', CHARS.hero, 200, 1, true);
+    c.actors.coline.typing = true; c.actors.hero.typing = true;
+    // à droite : Bastien et Olivier font une partie de pétanque
+    c.prop('gravier', 850, FLOOR_Y, { w: 120 }); c.prop('cochonnet', 928, FLOOR_Y - 6, { lift: 0, scale: 1 });
+    c.add('bastien', CHARS.bastien, 775, { face: 1 }); c.add('olivier', CHARS.olivier, 845, { face: 1 });
+    yield c.caption('Vendredi matin. Open space.', 2.4);
+    yield c.say('bastien', 'Tu tires ou tu pointes ?', { name: 'Bastien' });
+    const boules = [];
+    c.spawn((function* () {                                              // ils lancent leurs boules chacun leur tour, pendant toute la scène
+      for (let i = 0; ; i++) {
+        const k = i % 2 ? 'olivier' : 'bastien', a = c.actors[k]; c.pose(k, 'wave'); yield c.wait(0.35); c.pose(k, 'idle');
+        const b = c.prop('boule', a.x + 14, a.y - 40, { lift: 0, scale: 1.25 }); boules.push(b);
+        yield lob(b, 905 + rnd(-32, 26), FLOOR_Y - 8, 0.75, 75); c.sfx('blip');
+        if (boules.length > 7) c.unprop(boules.shift());
+        yield c.wait(1.0 + Math.random() * 0.9);
+      }
+    })());
+    yield c.wait(1.2);
+    // un écran Teams s'affiche en grand au milieu de la scène
+    const teams = c.prop('teams', 500, 455, { front: true, open: 0, w: 510, h: 290, msgs: [], up: 0, down: 0, typing: null });
+    yield { t: 0, update(dt) { this.t += dt; teams.open = ease(Math.min(1, this.t / 0.6)); return this.t >= 0.6; } };
+    const post = function* (key, name, text, o) {
+      o = o || {}; teams.typing = name; yield beat(o.typing || 1.0); teams.typing = null;
+      teams.msgs.push({ key, name, text, t0: c.time(), h: o.h || 28, gif: o.gif }); c.sfx('blip'); yield beat(o.wait || 1.7);
+    };
+    yield* post('hero', 'Stephan', "Charlie's ce midi ? Un pouce si vous êtes disponible", { h: 50, typing: 1.4 });
+    c.spawn((function* () {                                              // les pouces arrivent au fur et à mesure : 6 vers le haut, 4 vers le bas
+      for (const [kind, wait] of [['up', 0.5], ['up', 0.5], ['down', 0.9], ['up', 0.6], ['down', 1.0], ['up', 0.8], ['down', 1.1], ['up', 0.9], ['down', 0.8], ['up', 0.9]]) {
+        yield c.wait(wait); teams[kind]++; c.sfx('coin');
+      }
+    })());
+    yield* post('imen', 'Imen', 'Il est 9h Stephan');
+    yield* post('cecile', 'Cécile', '', { gif: true, h: 60, typing: 0.8 });
+    yield* post('sheryna', 'Sheryna', 'Je vais courir ce midi ! Profitez bien');
+    yield* post('danila', 'Danila', "J'ai déjà mangé 2 entrecôtes ce matin, je passe mon tour");
+    yield* post('franck', 'Franck', 'On va rollback prepav2 à 12h26, je passe mon tour');
+    // Stephan conclut
+    yield* post('hero', 'Stephan', 'Ok, je réserve pour 6, départ à 11h55 !', { typing: 1.2, wait: 0.9 });
+    c.pose('hero', 'cheer'); c.actors.hero.typing = false; c.sfx('win');
+    yield c.say('hero', 'Ok, je réserve pour 6, départ à 11h55 !');
+    yield { t: 0, update(dt) { this.t += dt; teams.open = 1 - ease(Math.min(1, this.t / 0.5)); return this.t >= 0.5; } };
+    c.unprop(teams); c.pose('hero', 'sit');
+    yield c.say(null, "Direction Charlie's, le temple de l'entrecôte.");
     yield c.fade(1, 0.6);
   },
 };

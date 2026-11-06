@@ -87,7 +87,7 @@ function drawCharacter(ctx, ch, x, y, a) {
     case 'fall':  lL = 0.25; lR = -0.25; aL = -1.5; aR = 1.5; break;
     case 'wave':  aR = 2.7 + Math.sin(t * 10) * 0.35; break;
     case 'cheer': aL = -2.7; aR = 2.7; bob = -Math.abs(Math.sin(t * 7)) * 5; lL = 0.12; lR = -0.12; break;
-    case 'sit':   sit = true; low = 10; aR = a.waving ? 2.7 + Math.sin(t * 10) * 0.35 : 1.05; aL = 0.9; bob = Math.sin(t * 1.6) * 0.5; break;
+    case 'sit':   sit = true; low = 10; aR = a.waving ? 2.7 + Math.sin(t * 10) * 0.35 : a.typing ? 1.0 + Math.sin(t * 22) * 0.2 : 1.05; aL = a.typing ? 0.95 + Math.sin(t * 22 + 2) * 0.2 : 0.9; bob = Math.sin(t * 1.6) * 0.5; break;
     case 'hurt':  aL = -2.2; aR = 2.2; lL = 0.4; lR = -0.4; break;
   }
   const skin = ch.skin || '#f0c8a0', top = ch.top || '#2f6db5', bot = ch.bottom || '#2c3440', shoe = ch.shoe || '#1b1b1b';
@@ -294,6 +294,10 @@ function drawItem(ctx, kind, x, y, s, t, v) {
     case 'ticketbl':
       ctx.rotate(-0.14); rr(ctx, -14, -10, 28, 20, 3, '#fffdf4', '#3a4b5f', 1.5); rect(ctx, -14, -10, 6, 20, '#e0a030');
       line(ctx, -4, -4, 10, -4, '#7a8aa0', 1.6); line(ctx, -4, 1, 7, 1, '#7a8aa0', 1.6); circ(ctx, 9, 6, 2.2, '#d6402f'); break;
+    case 'boule':                                 // boule de pétanque
+      circ(ctx, 0, 0, 7.5, '#5d6670'); circ(ctx, 0, 0, 6.6, '#a7b0ba'); ctx.strokeStyle = '#6d7782'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(0, 0, 4.6, 0.4, 2.6); ctx.arc(0, 0, 2.4, 3.6, 5.8); ctx.stroke(); circ(ctx, -2.4, -2.6, 1.7, 'rgba(255,255,255,.85)'); break;
+    case 'cochonnet':                             // le petit but de la pétanque
+      circ(ctx, 0, 0, 3.2, '#b8860b'); circ(ctx, 0, 0, 2.6, '#f2c94c'); circ(ctx, -0.8, -0.9, 0.9, '#fff6c2'); break;
     case 'basket':                                // ballon de basket
       circ(ctx, 0, 0, 11, '#e8762c'); ctx.strokeStyle = '#3a1c0c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.2832); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.moveTo(0, -11); ctx.lineTo(0, 11);
       ctx.moveTo(-7.8, -7.8); ctx.quadraticCurveTo(-3, 0, -7.8, 7.8); ctx.moveTo(7.8, -7.8); ctx.quadraticCurveTo(3, 0, 7.8, 7.8); ctx.stroke(); break;
@@ -381,7 +385,7 @@ function drawItem(ctx, kind, x, y, s, t, v) {
   }
   ctx.restore();
 }
-const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'basket', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
+const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'basket', 'boule', 'cochonnet', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
 
 /* ============================================================
    ENNEMIS / OBSTACLES   (pieds en y, centrés sur x)
@@ -501,9 +505,47 @@ function drawSpring(ctx, x, y, squash) {
 /* ============================================================
    ACCESSOIRES de cinématique (posés au sol, y = sol)
    ============================================================ */
+function drawThumb(ctx, x, y, s, up, col) {       // petit pouce levé (up) ou baissé
+  ctx.save(); ctx.translate(x, y); if (!up) ctx.scale(1, -1); ctx.scale(s, s);
+  rr(ctx, -5, -1, 10, 8, 2, col); rr(ctx, -4.4, -8, 3.8, 9, 1.9, col); rect(ctx, -7.4, -0.5, 2.4, 7.6, col); rect(ctx, -3.4, 1.6, 7.4, 0.9, 'rgba(255,255,255,.55)'); rect(ctx, -3.4, 4, 7.4, 0.9, 'rgba(255,255,255,.55)');
+  ctx.restore();
+}
 function drawProp(ctx, p, t) {
   const x = p.x, y = p.y;
   switch (p.kind) {
+    case 'gravier':                               // terrain de pétanque
+      ell(ctx, x, y - 2, p.w || 120, 9, 'rgba(120,96,60,.35)'); ell(ctx, x, y - 3, (p.w || 120) - 12, 6, 'rgba(200,176,132,.55)'); break;
+    case 'teams': {                               // grande fenêtre de conversation Teams (x = centre, y = bas de l'écran)
+      const o = p.open === undefined ? 1 : p.open; if (o <= 0.02) break;
+      const w = p.w || 510, h = p.h || 290, top = y - h, L = x - w / 2, msgs = p.msgs || [];
+      ctx.save(); ctx.translate(x, top + h / 2); ctx.scale(0.55 + 0.45 * o, 0.55 + 0.45 * o); ctx.globalAlpha = Math.min(1, o * 1.6); ctx.translate(-x, -(top + h / 2));
+      rr(ctx, L - 12, top - 12, w + 24, h + 24, 14, '#1d2230', '#3a4258', 2); rect(ctx, x - 26, top + h + 12, 52, 14, '#3a4258'); rr(ctx, x - 70, top + h + 24, 140, 8, 4, '#4a5268');
+      rr(ctx, L, top, w, h, 6, '#f5f5f5'); ctx.save(); ctx.beginPath(); ctx.rect(L, top, w, h); ctx.clip();
+      rect(ctx, L, top, w, 26, '#464eb8'); rr(ctx, L + 8, top + 5, 16, 16, 3, '#fff'); txt(ctx, 'T', L + 16, top + 18, 13, '#464eb8', 'center', 'bold');
+      txt(ctx, 'Microsoft Teams  ·  Delivery  >  Général', L + 32, top + 18, 12, '#fff', 'left', 'bold'); for (let i = 0; i < 3; i++) circ(ctx, L + w - 14 - i * 14, top + 13, 3.5, 'rgba(255,255,255,.75)');
+      let cy = top + 34;
+      msgs.forEach((m, idx) => {
+        const age = Math.max(0, (t - m.t0)), a = Math.min(1, age / 0.25), yo = (1 - a) * 8, hh = m.h || 28; ctx.globalAlpha = Math.min(1, o * 1.6) * a;
+        circ(ctx, L + 22, cy + 13 + yo, 12, '#dfe2f7'); drawHead(ctx, CHARS[m.key], L + 22, cy + 14 + yo, 22, {});
+        rr(ctx, L + 40, cy + yo, w - 52, (m.gif ? 60 : 26), 6, m.key === 'hero' ? '#e8ebfa' : '#fff', '#dcdce6', 1);
+        txt(ctx, m.name, L + 48, cy + 10 + yo, 10, '#464eb8', 'left', 'bold');
+        if (m.gif) {                              // petit GIF de chat
+          const gx = L + 48, gy = cy + 14 + yo; rr(ctx, gx, gy, 70, 42, 4, '#cfe3d4'); ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, 70, 42); ctx.clip();
+          ctx.translate(gx + 35, gy + 28); ctx.rotate(Math.sin(t * 5) * 0.1);
+          poly(ctx, [[-13, -6], [-9, -19], [-3, -9]], '#e58f3c'); poly(ctx, [[13, -6], [9, -19], [3, -9]], '#e58f3c'); circ(ctx, 0, 0, 14, '#f0a050');
+          ell(ctx, 0, 5, 7, 5, '#f7d9b5'); ctx.fillStyle = '#222'; const bl = Math.sin(t * 3) > 0.9; ctx.fillRect(-7, -4, 3, bl ? 1 : 4); ctx.fillRect(4, -4, 3, bl ? 1 : 4); circ(ctx, 0, 2, 1.6, '#e8707a');
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-5, 4); ctx.lineTo(-15, 2); ctx.moveTo(-5, 6); ctx.lineTo(-15, 8); ctx.moveTo(5, 4); ctx.lineTo(15, 2); ctx.moveTo(5, 6); ctx.lineTo(15, 8); ctx.stroke();
+          ctx.restore(); rr(ctx, gx + 3, gy + 3, 20, 10, 3, 'rgba(0,0,0,.55)'); txt(ctx, 'GIF', gx + 13, gy + 11, 8, '#fff', 'center', 'bold');
+        } else txt(ctx, m.text, L + 48, cy + 22 + yo, 12, '#222', 'left');
+        if (idx === 0 && (p.up || p.down)) {      // réactions : pouces levés / baissés
+          const ry = cy + 28 + yo; rr(ctx, L + 40, ry, 46, 17, 8.5, '#e8ebfa', '#b9bdf0', 1); drawThumb(ctx, L + 52, ry + 9, 0.8, true, '#464eb8'); txt(ctx, String(p.up || 0), L + 72, ry + 13, 11, '#464eb8', 'center', 'bold');
+          rr(ctx, L + 92, ry, 46, 17, 8.5, '#fde8ea', '#e8a6ae', 1); drawThumb(ctx, L + 104, ry + 8, 0.8, false, '#c0392b'); txt(ctx, String(p.down || 0), L + 124, ry + 13, 11, '#c0392b', 'center', 'bold');
+        }
+        cy += hh;
+      });
+      ctx.globalAlpha = Math.min(1, o * 1.6);
+      if (p.typing) { const dots = '.'.repeat(1 + Math.floor(t * 3) % 3); txt(ctx, p.typing + ' est en train d\'écrire' + dots, L + 14, top + h - 8, 10.5, '#777', 'left'); }
+      ctx.restore(); ctx.restore(); break; }
     case 'desk':
       rr(ctx, x - 44, y - 34, 88, 8, 2, '#c9a46a'); rect(ctx, x - 40, y - 26, 5, 26, '#8d6e3f'); rect(ctx, x + 35, y - 26, 5, 26, '#8d6e3f');
       rr(ctx, x - 15, y - 58, 30, 22, 2, '#222'); rr(ctx, x - 13, y - 56, 26, 17, 1, '#7cc0ff'); rect(ctx, x - 3, y - 36, 6, 4, '#555');
