@@ -648,6 +648,37 @@ function drawProp(ctx, p, t) {
       ctx.strokeStyle = '#7a3f0c'; ctx.lineWidth = 2; ctx.beginPath();
       for (let a = 0; a < 12.5; a += 0.2) { const r = 1.5 + a * 1.9; ctx.lineTo(x - 6 + Math.cos(a) * r, y - 36 + Math.sin(a) * r); } ctx.stroke();
       ctx.restore(); break; }
+    case 'bille': {                               // bille / boulard (y = sol, rayon p.r, couleur p.c, rotation p.ang)
+      const r = p.r || 6, col = p.c || '#e8433a';
+      ell(ctx, x, y - 1, r * 0.9, r * 0.25, 'rgba(0,0,0,.2)');
+      circ(ctx, x, y - r, r, col); ctx.strokeStyle = shade(col, -0.35); ctx.lineWidth = Math.max(1, r / 12); ctx.beginPath(); ctx.arc(x, y - r, r, 0, 6.2832); ctx.stroke();
+      ctx.save(); ctx.translate(x, y - r); ctx.rotate(p.ang || 0); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = Math.max(1, r / 6);
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0.3, 2.3); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 3.4, 5.6); ctx.stroke(); ctx.restore();
+      circ(ctx, x - r * 0.35, y - r * 1.4, r * 0.2, 'rgba(255,255,255,.85)'); break; }
+    case 'billes': {                              // cercle de billes dessiné à la craie
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 5, 62, 9, 0, 0, 6.2832); ctx.stroke();
+      const cs = ['#e8433a', '#2f7fd1', '#f2c230', '#3aa65a', '#b04ad1'];
+      for (let i = 0; i < 7; i++) { const ax = x + (hash(i * 5) - 0.5) * 80, ay = y - 5 + (hash(i * 9) - 0.5) * 8; circ(ctx, ax, ay - 3, 4, cs[i % 5], shade(cs[i % 5], -0.35), 1); circ(ctx, ax - 1.3, ay - 4.3, 1.1, 'rgba(255,255,255,.8)'); }
+      break; }
+    case 'twingo': {                              // Twingo jaune, regarde à droite (p.face = -1 pour l'inverser)
+      ctx.save(); if (p.face === -1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+      const by = y - (p.moving ? Math.abs(Math.sin(t * 22)) * 1.6 : 0);
+      rr(ctx, x - 66, by - 36, 132, 24, 8, '#f2c230', '#a9801b', 2);
+      poly(ctx, [[x - 38, by - 36], [x - 26, by - 66], [x + 22, by - 66], [x + 44, by - 36]], '#f2c230', '#a9801b', 2);
+      ctx.globalAlpha = 0.4; poly(ctx, [[x - 31, by - 40], [x - 22, by - 61], [x + 18, by - 61], [x + 36, by - 40]], '#bfe3f5'); ctx.globalAlpha = 1;
+      line(ctx, x - 2, by - 61, x - 2, by - 40, '#f2c230', 3);
+      circ(ctx, x + 59, by - 27, 4.5, '#fff6c0', '#a9801b', 1); rect(ctx, x - 66, by - 30, 5, 8, '#c0392b'); rect(ctx, x - 68, by - 16, 136, 4, '#555');
+      for (const wx of [-40, 42]) { circ(ctx, x + wx, by - 11, 13, '#222'); circ(ctx, x + wx, by - 11, 6, '#b8b8b8'); }
+      ctx.restore(); break; }
+    case 'parachute': {                           // voile de parachute au-dessus du point (x,y = pieds du personnage)
+      const bx = x, byy = y - 175, rx = 64, ry = 48, cs = ['#e84a4a', '#ffffff'];
+      for (const s of [-1, 1]) line(ctx, bx + s * rx * 0.92, byy + 2, x + s * 4, y - 66, 'rgba(60,60,60,.8)', 1.2);
+      line(ctx, bx, byy, x, y - 66, 'rgba(60,60,60,.8)', 1.2);
+      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(bx, byy); ctx.ellipse(bx, byy, rx, ry, 0, Math.PI + i * Math.PI / 5, Math.PI + (i + 1) * Math.PI / 5); ctx.closePath(); ctx.fillStyle = cs[i % 2]; ctx.fill(); }
+      ctx.strokeStyle = '#8a2a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(bx, byy, rx, ry, 0, Math.PI, 6.2832); ctx.closePath(); ctx.stroke(); break; }
+    case 'wc':
+      rr(ctx, x - 27, y - 114, 54, 114, 3, '#8a99a8', '#4a5662', 2); rr(ctx, x - 21, y - 108, 42, 102, 2, '#a3b1bf');
+      rr(ctx, x - 17, y - 98, 34, 20, 3, '#ffffff', '#4a5662', 1.5); txt(ctx, 'WC', x, y - 82, 14, '#2a2a2a', 'center'); circ(ctx, x + 14, y - 52, 3, '#e0b030'); break;
     case 'haltere':
       rect(ctx, x - 20, y - 2, 40, 4, '#555'); for (const s of [-1, 1]) { rr(ctx, x + s * 20 - 5, y - 11, 10, 22, 3, '#2a2a2a', '#111', 1); rr(ctx, x + s * 26 - 3, y - 7, 6, 14, 2, '#444'); } break;
     case 'scene':

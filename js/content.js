@@ -1158,26 +1158,111 @@ const FETE_GUESTS = [['coline', 40], ['amelie', 95], ['sheryna', 150], ['youssef
 CUTS.fete_intro = {
   type: 'cutscene', bg: 'bar',
   script: function* (c) {
-    c.prop('banner', 480, 40, { w: 560 });
+    c.prop('banner', 480, 40, { w: 560 }); c.prop('wc', 505, FLOOR_Y);
+    // ---- outils ----
+    const X = {}; for (const [k, x] of FETE_GUESTS) X[k] = x;
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const arc = (k, x2, y2, dur, h) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; }); };
+    const enter = (k) => { const l = X[k] < 480; c.add(k, CHARS[k], l ? -70 : 1030, { face: l ? 1 : -1, state: 'walk' }); return c.walk(k, X[k], 150); };
+    const arrive = function* (k, text) { yield enter(k); c.face(k, X[k] < 480 ? 1 : -1); if (text) yield c.say(k, text); };
+    // ---- Bastien et Olivier jouent aux billes en rigolant ----
+    c.prop('billes', 838, FLOOR_Y, {});
+    c.add('bastien', CHARS.bastien, 810, { face: 1 }); c.add('olivier', CHARS.olivier, 865, { face: -1 });
+    const play = { on: true };
+    const bille = c.prop('bille', 822, FLOOR_Y, { r: 6, c: '#e8433a' });
+    c.spawn((function* () {
+      let from = 'bastien';
+      while (play.on) {
+        const x0 = from === 'bastien' ? 822 : 856, x1 = from === 'bastien' ? 856 : 822, other = from === 'bastien' ? 'olivier' : 'bastien';
+        bille.x = x0; yield tween(0.55, u => { bille.x = lerp(x0, x1, u); bille.ang = u * 14; });
+        c.pose(other, 'cheer'); c.emote(other, from === 'bastien' ? 'hihi' : 'hahaha', 1); c.sfx('blip');
+        yield c.wait(0.7); c.pose(other, 'idle'); from = other;
+      }
+    })());
     yield c.caption('Jour J. Le bar.', 2.2);
-    for (const [k, x] of FETE_GUESTS) c.add(k, CHARS[k], x, { face: x < 480 ? 1 : -1 });
-    c.add('hero', CHARS.hero, 480, { face: 1 });
-    c.pose('hero', 'wave'); c.confetti(60);
-    yield c.say('coline', 'Merci pour ton calme dans les moments difficiles, Stephan.');
-    yield c.say('amelie', 'Tu as toujours le mot pour nous remonter le moral.');
+    yield c.wait(2.4);
+    // ---- Stephan arrive ----
+    c.add('hero', CHARS.hero, -60, { face: 1, state: 'walk' });
+    yield c.walk('hero', 690, 130);
+    c.pose('hero', 'wave'); c.face('bastien', -1); c.face('olivier', -1);
+    yield c.say('hero', 'Coucou les petits loups !');
+    c.pose('hero', 'idle');
+    yield c.walk('hero', 725, 120);
+    const bou = c.prop('bille', 758, FLOOR_Y, { r: 26, c: '#2f7fd1' }); c.sfx('pop');
+    yield c.say('hero', 'Je peux jouer avec vous ?');
+    c.emote('bastien', '!!', 1.6); c.emote('olivier', '!!', 1.6);
+    yield c.say('bastien', 'Waouh ! Elle est énorme, ta boule !', { name: 'Bastien et Olivier', mood: 'surprised' });
+    play.on = false; c.unprop(bille);
+    yield tween(0.7, u => { bou.x = lerp(758, 836, u); bou.ang = u * 9; });
+    c.sfx('stomp'); c.shake(0.3); c.burst(838, FLOOR_Y - 8, 36, ['#e8433a', '#2f7fd1', '#f2c230', '#3aa65a', '#b04ad1'], 320);
+    c.pose('hero', 'cheer'); c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer'); c.emote('bastien', 'WAOUH', 2); c.emote('olivier', 'WAOUH', 2);
+    yield c.wait(1.6);
+    c.unprop(bou); c.pose('hero', 'idle'); c.pose('bastien', 'idle'); c.pose('olivier', 'idle');
+    yield c.walk('hero', 480, 150);
+    c.confetti(60); c.pose('hero', 'wave');
+    // ---- chacun arrive et dit sa phrase gentille ----
+    yield* arrive('coline', 'Merci pour ton calme dans les moments difficiles, Stephan.');
+    yield* arrive('youssef', 'Avec toi, aucune configuration n\'a jamais été un problème.');
+    yield* arrive('cecile', 'Tes conseils valent de l\'or, et ton humour aussi.');
+    c.add('danila', CHARS.danila, -70, { face: 1, state: 'walk' });
+    c.spawn((function* () { yield c.walk('danila', X.danila, 150); })());
+    yield* arrive('franck', 'Un vrai pilier de l\'équipe. Tu vas nous manquer.');
+    yield* arrive('hakim', 'Tu m\'as toujours soutenu, même quand l\'IA faisait des siennes.');
+    yield* arrive('matthieu', 'Merci d\'avoir toujours gardé le train sur les rails !');
+    yield* arrive('arno', 'Tu es la meilleure itération de toute l\'équipe.');
+    yield* arrive('justine', 'Tu as toujours été là pour nous, avec bienveillance.');
+    // ---- Sheryna arrive du ciel en parachute ----
+    c.add('sheryna', CHARS.sheryna, X.sheryna, { face: 1, state: 'idle' });
+    const chute = c.prop('parachute', X.sheryna, 230, {});
+    const sh = c.actors.sheryna; sh.rideOn = chute; sh.rideDx = 0; sh.rideDy = 0;
+    const down = { done: false };
+    c.spawn((function* () { yield tween(3.4, u => { chute.y = lerp(230, FLOOR_Y, u); chute.x = X.sheryna + Math.sin(u * 9) * 26 * (1 - u); }); down.done = true; })());
+    yield c.say('sheryna', 'J\'arriiiiive !', { mood: 'laugh' });
+    while (!down.done) yield frame1();
+    sh.rideOn = null; sh.y = FLOOR_Y; sh.x = X.sheryna; c.unprop(chute);
+    c.sfx('stomp'); c.burst(X.sheryna, FLOOR_Y, 12, ['#e8e2d4'], 160);
+    yield c.say('sheryna', 'Pile à l\'heure !', { mood: 'laugh' });
     yield c.say('sheryna', 'Avec toi, tout finit par s\'arranger. C\'est un super don.');
-    yield c.say('youssef', 'Avec toi, aucune configuration n\'a jamais été un problème.');
-    yield c.say('imen', 'Tu as géré chaque projet avec le sourire.');
-    yield c.say('cecile', 'Tes conseils valent de l\'or, et ton humour aussi.');
-    yield c.say('franck', 'Un vrai pilier de l\'équipe. Tu vas nous manquer.');
-    yield c.say('hakim', 'Tu m\'as toujours soutenu, même quand l\'IA faisait des siennes.');
-    yield c.say('matthieu', 'Merci d\'avoir toujours gardé le train sur les rails !');
-    yield c.say('arno', 'Tu es la meilleure itération de toute l\'équipe.');
-    yield c.say('justine', 'Tu as toujours été là pour nous, avec bienveillance.');
+    // ---- Sandie arrive en Twingo avec Imen et Amélie ----
+    const car = c.prop('twingo', -170, FLOOR_Y - 6, { moving: true, front: true });
+    c.add('sandie', CHARS.sandie, -170, { face: 1, state: 'sit' }); c.add('imen', CHARS.imen, -170, { face: 1, state: 'sit' }); c.add('amelie', CHARS.amelie, -170, { face: 1, state: 'sit' });
+    const sit = (k, dx) => { const a = c.actors[k]; a.rideOn = car; a.rideDx = dx; a.rideDy = -12; a.z = 1; };
+    sit('sandie', 24); sit('imen', -8); sit('amelie', -38);
+    c.sfx('spring'); yield tween(2.2, u => { car.x = lerp(-170, 330, 1 - (1 - u) * (1 - u)); });
+    car.moving = false; c.sfx('blip');
+    yield c.say('sandie', 'Livraison de futures mamans !', { mood: 'laugh' });
+    for (const k of ['imen', 'amelie']) {
+      const a = c.actors[k]; a.rideOn = null; a.state = 'idle'; c.sfx('jump');
+      yield arc(k, X[k], FLOOR_Y, 0.6, 50); a.y = FLOOR_Y; a.z = 0;
+      yield c.say(k, k === 'imen' ? 'Tu as géré chaque projet avec le sourire.' : 'Tu as toujours le mot pour nous remonter le moral.');
+    }
+    yield c.say('sandie', 'Je vais me garer !');
+    car.moving = true; c.sfx('spring'); yield tween(2.4, u => { car.x = lerp(330, 1300, u * u); });
+    c.remove('sandie'); c.unprop(car);
+    yield c.wait(1.6);
+    // ---- elle revient : pause technique aux toilettes ----
+    const car2 = c.prop('twingo', 1300, FLOOR_Y - 6, { moving: true, face: -1, front: true });
+    c.add('sandie', CHARS.sandie, 1300, { face: -1, state: 'sit' });
+    const sa = c.actors.sandie; sa.rideOn = car2; sa.rideDx = -24; sa.rideDy = -12; sa.z = 1;
+    c.sfx('spring'); yield tween(2.2, u => { car2.x = lerp(1300, 700, 1 - (1 - u) * (1 - u)); });
+    car2.moving = false; c.sfx('blip');
+    c.emote('sandie', '!', 1.4);
+    yield c.say('sandie', 'Oups… pause technique !', { mood: 'surprised' });
+    sa.rideOn = null; sa.state = 'idle'; sa.z = 0; c.sfx('jump');
+    yield arc('sandie', 650, FLOOR_Y, 0.5, 40); sa.y = FLOOR_Y;
+    yield c.walk('sandie', 508, 230);
+    c.sfx('door'); c.remove('sandie');
+    yield c.wait(1.8);
+    c.add('sandie', CHARS.sandie, 508, { face: 1 }); c.sfx('door');
+    yield c.say('sandie', 'Ah, ça fait du bien !', { mood: 'laugh' });
+    yield c.walk('sandie', X.sandie, 150); c.face('sandie', -1);
     yield c.say('sandie', 'Tu as changé nos habitudes… en mieux !');
+    // ---- puis le chef, Bastien et Olivier ----
+    yield* arrive('chef', 'Quinze ans de bons et loyaux services. Tu as été un collègue précieux.');
+    c.face('bastien', -1); c.face('olivier', -1);
     yield c.say('bastien', 'Un mentor et un ami, Stephan. Merci pour tout.');
     yield c.say('olivier', 'Avec toi, tout est toujours conforme… à la bonne humeur.');
-    yield c.say('chef', 'Quinze ans de bons et loyaux services. Tu as été un collègue précieux.');
     c.pose('hero', 'idle'); c.emote('hero', '♥', 2);
     yield c.say('hero', 'Vous allez me faire pleurer…', { mood: 'sad' });
     c.pose('danila', 'wave');
