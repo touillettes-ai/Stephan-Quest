@@ -786,22 +786,110 @@ CUTS.backlog_intro = {
     yield c.say('hero', 'Le backlog… Il me faut de l\'aide. Qui est dispo ?');
     yield c.say('chef', 'Bastien. Il est derrière.');
     yield c.walk('hero', 620, 170);
-    yield* juggle(c, ball, 2);
+    // ---- outils de la scène ----
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const arc = (k, x2, y2, dur, h, rot) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; a.rot = (rot || 0) * u; }); };
+    const exit = (k, x) => c.spawn((function* () { yield c.walk(k, x, 95); c.remove(k); })());
+    // ---- Bastien jongle de la tête en continu, Olivier compte à voix haute ----
+    const jug = { on: true, n: 0 };
+    c.spawn((function* () {
+      while (jug.on) {
+        jug.n++; c.emote('olivier', String(jug.n)); c.sfx('blip');
+        for (let k = 0; k <= 12 && jug.on; k++) { ball.x = c.actors.bastien.x + 5; ball.y = FLOOR_Y - 104 - Math.sin(k / 12 * Math.PI) * 58; yield c.wait(0.04); }
+      }
+    })());
     yield c.say('hero', 'Bastien ! Qu\'est-ce que tu fais ?');
-    yield c.say('bastien', 'Du sport collectif ! Olivier, attrape !', { mood: 'laugh' });
+    yield c.say('bastien', 'Du sport collectif ! Olivier compte mes jongles !', { mood: 'laugh' });
+    yield c.wait(2.2);
+    yield c.say('bastien', 'Olivier, attrape !', { mood: 'laugh' });
+    jug.on = false; yield c.wait(0.05);
+    c.emote('olivier', null);
     yield* kick(c, ball, 890, FLOOR_Y - 70);
-    c.pose('olivier', 'hurt'); c.emote('olivier', '!', 1.2); c.sfx('hurt');
-    yield c.say('olivier', 'Aïe ! Ma tête !', { mood: 'surprised' });
-    c.pose('olivier', 'idle');
+    // Olivier encaisse le ballon en pleine tête : il est sonné et s'écroule
+    const oli = c.actors.olivier;
+    c.pose('olivier', 'hurt'); c.sfx('hurt'); c.shake(0.2); c.emote('olivier', '@@');
+    yield tween(0.4, u => { ball.x = lerp(890, 850, u); ball.y = lerp(FLOOR_Y - 70, FLOOR_Y - 18, u * u) - Math.sin(u * Math.PI) * 30; });
+    yield c.wait(0.5);
+    c.sfx('stomp'); yield tween(0.35, u => { oli.rot = -1.5708 * u; oli.y = FLOOR_Y + 19 * u; });
+    c.burst(900, FLOOR_Y, 10, ['#e8e2d4'], 150);
     yield c.say('hero', 'Le backlog a besoin de nous. Viens !');
     c.emote('bastien', '!', 1.2);
     yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…', { mood: 'surprised' });
-    c.unprop(ball);
     yield [c.walk('hero', 190, 230), c.walk('bastien', 255, 230)];
     c.sfx('spring'); c.shake(0.5);
     yield [c.walk('hero', 120, 160), c.jump('hero', 90), c.walk('bastien', 130, 160), c.jump('bastien', 90)];
     c.remove('hero'); c.remove('bastien'); c.sfx('door'); c.confetti(60);
-    yield c.say(null, 'Stephan et Bastien viennent de sauter dans l\'écran…');
+    yield c.wait(0.8);
+    // ---- Olivier se réveille, encore dans les vapes : il prend le chef pour Bastien ----
+    yield tween(0.9, u => { oli.rot = -1.5708 * (1 - u) + Math.sin(u * 18) * 0.12 * (1 - u); oli.y = FLOOR_Y + 19 * (1 - u); });
+    oli.rot = 0; oli.y = FLOOR_Y; c.pose('olivier', 'idle'); c.face('olivier', -1); c.emote('olivier', '@@', 3);
+    yield c.say('olivier', 'Aïe… ma tête… Où est-il ?', { mood: 'surprised' });
+    yield c.walk('olivier', 850, 90);
+    const hold = { on: true };
+    c.spawn((function* () { while (hold.on) { ball.x = oli.x - 18; ball.y = FLOOR_Y - 20; yield frame1(); } })());
+    yield c.walk('olivier', 640, 120);
+    c.emote('olivier', '!', 1);
+    yield c.say('olivier', 'Bastien ! Cette fois, je vais pas te rater !', { mood: 'angry' });
+    hold.on = false; c.pose('olivier', 'cheer');
+    yield* kick(c, ball, c.actors.chef.x + 6, FLOOR_Y - 92);
+    c.unprop(ball); c.sfx('stomp'); c.shake(0.35); c.pose('olivier', 'idle');
+    c.emote('chef', 'AAAH !', 2);
+    yield c.wait(0.25); c.sfx('jump');
+    yield arc('chef', -260, -200, 1.1, 90, -12.566);
+    c.remove('chef');
+    yield c.wait(0.8);
+    // ---- Coline, Imen et Amélie arrivent ----
+    c.face('olivier', -1);
+    c.add('coline', CHARS.coline, -60, { face: 1, state: 'walk' }); c.add('imen', CHARS.imen, -140, { face: 1, state: 'walk' }); c.add('amelie', CHARS.amelie, -220, { face: 1, state: 'walk' });
+    yield [c.walk('coline', 360, 110), c.walk('imen', 280, 110), c.walk('amelie', 200, 110)];
+    c.face('coline', 1);
+    yield c.say('coline', 'Il avait l\'air pressé, le chef.');
+    c.pose('imen', 'cheer'); c.pose('amelie', 'cheer');
+    exit('olivier', 1120); c.emote('olivier', 'fiu fiu~', 4);
+    yield c.say('imen', 'Hahaha !', { mood: 'laugh' });
+    yield c.say('amelie', 'Même pas un bonjour !', { mood: 'laugh' });
+    c.pose('imen', 'idle'); c.pose('amelie', 'idle');
+    // ---- Sheryna arrive à dos d'escargot ----
+    const snail = c.prop('escargot', -110, FLOOR_Y, {});
+    c.add('sheryna', CHARS.sheryna, -110, { face: 1, state: 'idle' });
+    const sh = c.actors.sheryna; sh.rideOn = snail; sh.rideDy = -52;
+    const sn = { on: true };
+    c.spawn((function* () { while (sn.on) { const dt = 1 / 60; snail.x += (snail.x < 55 ? 70 : 9) * dt; if (snail.x > 95) snail.x = 95; yield frame1(); } })());
+    yield c.wait(1.6);
+    yield c.say('sheryna', 'Vous m\'avez pas attendue ! Je suis restée coincée dans le tourniquet avec mon nouveau moyen de locomotion…', { mood: 'sad' });
+    yield c.say('coline', 'On avance, on a du retard !');
+    exit('coline', 1120); exit('imen', 1180); exit('amelie', 1240);
+    yield c.wait(7);
+    // ---- Franck et Cécile ----
+    c.add('franck', CHARS.franck, 1060, { face: -1, state: 'walk' }); c.add('cecile', CHARS.cecile, 1130, { face: -1, state: 'walk' });
+    yield [c.walk('franck', 620, 110), c.walk('cecile', 700, 110)];
+    yield c.say('franck', 'Passe devant, Cécile, je te suis.');
+    yield c.walk('cecile', 330, 120);
+    const fr = c.actors.franck; fr.z = -1; fr.y = FLOOR_Y - 8;
+    c.emote('franck', 'chut', 3);
+    yield c.walk('franck', 205, 140);
+    c.sfx('spring'); yield [c.walk('franck', 130, 150), c.jump('franck', 90)];
+    c.remove('franck'); c.sfx('door');
+    yield c.wait(0.5);
+    // ---- Cécile se retourne : plus de Franck ----
+    c.face('cecile', 1);
+    yield c.say('cecile', 'Franck, c\'est le 100ᵉ ou le 1000ᵉ rollback de prépa v2 prévu cet après-midi ?');
+    c.emote('cecile', '?', 1.6); yield c.wait(0.8); c.face('cecile', -1); yield c.wait(0.7); c.face('cecile', 1); yield c.wait(0.6);
+    yield c.say('cecile', 'Franck ? … Ils ont dû avancer le rollback.');
+    // ---- seule dans le bureau : séance de muscu ----
+    c.face('cecile', 1);
+    const halt = c.prop('haltere', 350, FLOOR_Y - 50, { front: true });
+    const ce = c.actors.cecile; let up = false, u = 0;
+    c.spawn((function* () {
+      while (true) {
+        u += 1 / 60; const k = (1 - Math.cos(u * 5)) / 2;
+        halt.x = ce.x + 18; halt.y = FLOOR_Y - 40 - k * 56;
+        if (k > 0.85 && !up) { up = true; c.pose('cecile', 'cheer'); c.sfx('blip'); } else if (k < 0.2 && up) { up = false; c.pose('cecile', 'idle'); }
+        yield frame1();
+      }
+    })());
+    yield c.wait(8);
     yield c.fade(1, 0.8);
   },
 };

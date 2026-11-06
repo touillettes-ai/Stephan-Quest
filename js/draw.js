@@ -637,6 +637,19 @@ function drawProp(ctx, p, t) {
     case 'tascarottes': {
       for (let i = 0; i < 26; i++) { const row = Math.floor(i / 6), col = i % 6, w = 6 - row; const dx = (col - (w - 1) / 2) * 11 + (hash(i * 3) - 0.5) * 8, dy = row * 14 + (hash(i * 7) - 0.5) * 4; if (col < w) drawItem(ctx, 'carotte', x + dx, y - 12 - dy, 1.25, t, i); }
       break; }
+    case 'escargot': {                            // escargot géant (monture de Sheryna), regarde à droite
+      ctx.save(); if (p.face === -1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+      const w = Math.sin(t * 4) * 2;
+      rr(ctx, x - 46, y - 14, 92, 14, 7, '#d9c27a', '#a88f3e', 1.5); rr(ctx, x + 30, y - 38, 14, 28, 7, '#d9c27a', '#a88f3e', 1.5);
+      line(ctx, x + 38, y - 36, x + 34 + w, y - 52, '#a88f3e', 2); line(ctx, x + 44, y - 36, x + 49 - w, y - 51, '#a88f3e', 2);
+      circ(ctx, x + 34 + w, y - 53, 3.2, '#fff'); circ(ctx, x + 49 - w, y - 52, 3.2, '#fff'); circ(ctx, x + 35 + w, y - 53, 1.4, '#222'); circ(ctx, x + 50 - w, y - 52, 1.4, '#222');
+      line(ctx, x + 36, y - 22, x + 41, y - 20, '#7a5a20', 1.5);
+      circ(ctx, x - 6, y - 36, 28, '#b5651d', '#7a3f0c', 2);
+      ctx.strokeStyle = '#7a3f0c'; ctx.lineWidth = 2; ctx.beginPath();
+      for (let a = 0; a < 12.5; a += 0.2) { const r = 1.5 + a * 1.9; ctx.lineTo(x - 6 + Math.cos(a) * r, y - 36 + Math.sin(a) * r); } ctx.stroke();
+      ctx.restore(); break; }
+    case 'haltere':
+      rect(ctx, x - 20, y - 2, 40, 4, '#555'); for (const s of [-1, 1]) { rr(ctx, x + s * 20 - 5, y - 11, 10, 22, 3, '#2a2a2a', '#111', 1); rr(ctx, x + s * 26 - 3, y - 7, 6, 14, 2, '#444'); } break;
     case 'scene':
       rr(ctx, x - p.w / 2, y - 30, p.w, 30, 4, '#3a2a22'); rect(ctx, x - p.w / 2, y - 30, p.w, 6, '#8a6a4a'); for (let i = 0; i < p.w / 60; i++) rect(ctx, x - p.w / 2 + 12 + i * 60, y - 22, 36, 3, 'rgba(255,255,255,.12)'); break;
     case 'foule':
