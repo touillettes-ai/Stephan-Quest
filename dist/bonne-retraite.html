@@ -3598,12 +3598,12 @@ CUTS.backlog_intro = {
     const sh = c.actors.sheryna; sh.rideOn = snail; sh.rideDy = -52;
     const sn = { on: true };
     sn.v = 70;
-    c.spawn((function* () { while (sn.on) { snail.x += sn.v / 60; if (sn.v === 70 && snail.x >= 55) sn.v = 0; yield frame1(); } })());
+    c.spawn((function* () { while (sn.on) { snail.x += sn.v / 60; if (sn.v === 11 && snail.x > 760) sn.v = 0; if (sn.v === 70 && snail.x >= 55) sn.v = 0; yield frame1(); } })());
     yield c.wait(1.6);
     yield c.say('sheryna', 'Vous m\'avez pas attendue ! Je suis restée coincée dans le tourniquet avec mon nouveau moyen de locomotion…', { mood: 'sad' });
     yield c.say('coline', 'On avance, on a du retard !');
     exit('coline', 1120); exit('imen', 1180); exit('amelie', 1240);
-    sn.v = 26;                                    // Sheryna suit les filles dès qu'elles partent
+    sn.v = 11;                                    // Sheryna suit les filles dès qu'elles partent (très lentement)
     yield c.wait(6);
     // ---- Franck et Cécile arrivent de l'autre côté (par la gauche) ----
     c.add('franck', CHARS.franck, -60, { face: 1, state: 'walk' }); c.add('cecile', CHARS.cecile, -140, { face: 1, state: 'walk' });
@@ -3625,15 +3625,28 @@ CUTS.backlog_intro = {
     c.face('cecile', 1);
     const halt = c.prop('haltere', 350, FLOOR_Y - 50, { front: true });
     const ce = c.actors.cecile; let up = false, u = 0;
+    const mus = { on: true, reps: 0 };
     c.spawn((function* () {
-      while (true) {
-        u += 1 / 60; const k = (1 - Math.cos(u * 5)) / 2;
+      while (mus.on) {
+        u += 1 / 60; const k = (1 - Math.cos(u * 4)) / 2;
         halt.x = ce.x + 18; halt.y = FLOOR_Y - 40 - k * 56;
-        if (k > 0.85 && !up) { up = true; c.pose('cecile', 'cheer'); c.sfx('blip'); } else if (k < 0.2 && up) { up = false; c.pose('cecile', 'idle'); }
+        if (k > 0.85 && !up) { up = true; mus.reps++; c.pose('cecile', 'cheer'); c.sfx('blip'); c.emote('cecile', String(mus.reps), 1.2); } else if (k < 0.2 && up) { up = false; c.pose('cecile', 'idle'); }
         yield frame1();
       }
     })());
-    yield c.wait(8);
+    while (mus.reps < 6) yield frame1();            // 6 répétitions complètes
+    yield c.wait(0.8);
+    mus.on = false; c.unprop(halt); c.pose('cecile', 'idle'); c.emote('cecile', null);
+    // ---- elle saute sur l'escargot de Sheryna ----
+    c.emote('cecile', '!', 1);
+    yield c.walk('cecile', Math.max(60, snail.x - 70), 140);
+    c.face('cecile', 1); c.sfx('jump');
+    yield arc('cecile', snail.x - 20, FLOOR_Y - 40, 0.55, 60, 0);
+    ce.rideOn = snail; ce.rideDx = -24; ce.rideDy = -44; sh.rideDx = 12;
+    c.sfx('stomp'); c.shake(0.2); c.pose('cecile', 'cheer');
+    yield c.say('cecile', 'Allez, au café ! Yihaaa !', { mood: 'laugh' });
+    c.sfx('win'); c.confetti(40); sn.v = 110;
+    yield c.wait(3.2);
     yield c.fade(1, 0.8);
   },
 };
