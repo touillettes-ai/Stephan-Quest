@@ -513,25 +513,116 @@ CUTS.j15_outro = {
 CUTS.j9_choix = {
   type: 'cutscene', bg: 'openspace',
   script: function* (c) {
-    const cast = ['hero', 'coline', 'amelie', 'sheryna', 'youssef', 'imen', 'cecile', 'franck', 'danila', 'hakim', 'matthieu', 'arno', 'justine', 'sandie', 'bastien', 'olivier'];
-    cast.forEach((k, i) => c.add(k, CHARS[k], 50 + i * 50, { face: i < 8 ? 1 : -1, state: 'idle' }));
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const arc = (k, x2, y2, dur, h) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; }); };
+    const beat = sec => ({ t: 0, update(dt) { this.t += dt; return this.t >= sec || Input.confirm(); } });          // pause qu'on peut passer avec Entrée
+    const exit = (k, x, sp) => c.spawn((function* () { yield c.walk(k, x, sp || 200); c.remove(k); })());
+    // ---- décor : le bureau de Stephan à gauche, un autre bureau au fond à droite ----
+    c.prop('chair', 66, FLOOR_Y, { z: -1 }); c.prop('desk', 106, FLOOR_Y, { front: true });
+    c.prop('desk', 860, FLOOR_Y, {});
+    // ---- Arno, Sandie, Bastien et Olivier jouent à 1, 2, 3 soleil (Olivier compte, face au mur) ----
+    const X0 = { arno: 660, sandie: 705, bastien: 750 }, LIM = 845;
+    for (const k in X0) c.add(k, CHARS[k], X0[k], { face: 1 });
+    c.add('olivier', CHARS.olivier, 925, { face: 1 });
+    const gm = { finish: false, out: {}, stop: {} };
+    c.spawn((function* () {
+      for (let round = 0; !gm.finish; round++) {
+        c.face('olivier', 1); c.emote('olivier', 'Un, deux, trois…', 1.7);
+        const act = Object.keys(X0).filter(k => !gm.out[k] && !gm.stop[k]);
+        for (const k of act) { c.face(k, 1); c.pose(k, 'walk'); }
+        for (let i = 0; i < 40 && !gm.finish; i++) { for (const k of act) { const a = c.actors[k]; if (a.x < LIM - (k === 'bastien' ? 40 : k === 'sandie' ? 20 : 0)) a.x += 1.04; } yield c.wait(0.04); }
+        c.face('olivier', -1); c.emote('olivier', 'SOLEIL !', 1.2);
+        if (round === 0) {                               // Arno ne s'arrête pas à temps : il perd
+          yield c.wait(0.35); c.emote('arno', '!', 1.2);
+          for (const k of act) if (k !== 'arno') c.pose(k, 'idle');
+          yield c.wait(0.3); c.pose('arno', 'idle'); c.emote('olivier', 'Arno a bougé !', 1.6); c.emote('arno', 'Zut !', 1.6); gm.out.arno = true;
+          yield c.wait(1.2); c.face('arno', -1); yield c.walk('arno', 625, 90); c.face('arno', 1); c.pose('arno', 'idle');
+        } else { for (const k of act) c.pose(k, 'idle'); yield c.wait(1.3); }
+      }
+      for (const k of ['sandie', 'bastien']) c.pose(k, 'idle');
+    })());
     yield c.caption('Midi. Open space.', 2.2);
-    c.pose('hero', 'wave');
-    yield c.say('hero', 'On mange où, les loulous ?');
+    yield c.wait(4.2);
+    // ---- Stephan arrive ----
+    c.add('hero', CHARS.hero, -60, { face: 1, state: 'walk' });
+    yield c.walk('hero', 470, 130);
+    c.emote('hero', '?', 1.2);
+    yield c.say('hero', 'Vous faites quoi encore ?');
+    yield c.say('arno', 'Un, deux, trois, soleil ! Ça se voit pas ?', { name: 'Tout le monde', mood: 'laugh' });
+    gm.stop.bastien = true; c.pose('bastien', 'idle'); c.face('bastien', -1);
+    yield c.say('bastien', 'Tu veux participer, Stephan ?');
     c.pose('hero', 'idle');
-    yield c.wait(0.4);
-    const votes = { amelie: 'Hoki Sushi', sheryna: 'Hoki Sushi', danila: 'Hoki Sushi', sandie: 'Hoki Sushi',
-      youssef: 'Charlie\'s', imen: 'Charlie\'s', hakim: 'Charlie\'s', matthieu: 'Charlie\'s', arno: 'Charlie\'s', justine: 'Charlie\'s', olivier: 'Charlie\'s',
-      bastien: 'Cantine', franck: 'Cantine', cecile: 'Cantine', coline: 'Cantine' };
-    for (const k in votes) { c.pose(k, 'wave'); c.emote(k, votes[k], 3.6); }     // tous votent en même temps, main levée
-    c.sfx('coin');
-    yield c.wait(3.8);
-    for (const k in votes) c.pose(k, 'idle');                                    // main baissée
-    yield c.wait(0.5);
-    c.emote('hero', '?', 1.4);
-    yield c.say('hero', 'Bon. Trois camps : Charlie\'s, la cantine… et Hoki Sushi.');
-    yield c.say('hero', 'Aujourd\'hui, ce sera Hoki Sushi avec Amélie, Danila, Sandie et Sheryna !');
-    yield c.say(null, 'Les autres iront à Charlie\'s ou à la cantine. Direction Hoki Sushi.');
+    yield c.say('hero', "Non merci, j'ai des choses plus importantes à faire.");
+    c.face('bastien', 1);
+    // ---- Stephan s'assoit à son PC et tape ----
+    c.face('hero', -1); yield c.walk('hero', 70, 150);
+    const hero = c.actors.hero; c.face('hero', 1); hero.z = 1; c.pose('hero', 'sit'); hero.typing = true;
+    yield c.wait(0.8);
+    // ---- la fenêtre Teams apparaît ----
+    const teams = c.prop('teams', 400, 455, { front: true, open: 0, w: 470, h: 340, msgs: [], up: 0, down: 0, typing: null });
+    yield tween(0.6, u => { teams.open = ease(u); });
+    const post = function* (key, name, text, o) {
+      o = o || {}; teams.typing = name; yield beat(o.typing || 1.0); teams.typing = null;
+      const m = { key, name, text, t0: c.time(), h: o.h || 28, gif: o.gif, emoji: o.emoji, up: 0, down: 0 }; teams.msgs.push(m); c.sfx('blip'); yield beat(o.wait || 1.7); return m;
+    };
+    const react = (target, seq) => c.spawn((function* () { for (const [kind, w] of seq) { yield c.wait(w); target[kind]++; c.sfx('coin'); } })());
+    yield* post('hero', 'Stephan', 'Qui pour Hoki Sushi ce midi ?', { h: 46, typing: 1.3 });
+    react(teams, [['up', 0.5], ['up', 0.5], ['down', 0.8], ['up', 0.6], ['down', 0.9], ['up', 0.8], ['down', 0.9], ['up', 0.9]]);     // 5 pouces levés, 3 baissés sur le message de Stephan
+    const im = yield* post('imen', 'Imen', 'Cantoche ce midi', { h: 46 });
+    react(im, [['up', 0.4], ['up', 0.4], ['up', 0.5], ['up', 0.5]]);
+    yield* post('amelie', 'Amélie', '', { gif: 'bebe', h: 62, typing: 0.8 });
+    yield* post('danila', 'Danila', 'Oki pour Hoki lol');
+    yield* post('justine', 'Justine', '', { emoji: true, h: 40, typing: 0.7 });
+    yield* post('sheryna', 'Sheryna', 'Je vais manger un grec avec le M. À tout');
+    yield* post('hero', 'Stephan', 'Hoki Sushi réservé, on décolle à 11h57 !', { typing: 1.2, wait: 1.2 });
+    hero.typing = false; c.sfx('win');
+    yield tween(0.5, u => { teams.open = 1 - ease(u); });
+    c.unprop(teams);
+    // ---- Sandie gagne la partie ----
+    gm.finish = true; yield c.wait(0.4);
+    c.face('olivier', -1);
+    yield c.walk('sandie', 892, 230);
+    c.pose('sandie', 'cheer'); c.sfx('win'); c.confetti(40);
+    const cup = c.prop('coupe', 900, FLOOR_Y - 84, { scale: 1.2, front: true });
+    yield c.say('sandie', "Pour une fois que c'est moi qui gagne à un 1, 2, 3 soleil ! Vivement que je gagne une partie de chat !", { mood: 'laugh' });
+    c.pose('sandie', 'idle'); c.unprop(cup);
+    // ---- Stephan soupire et sort en touchant Arno ----
+    c.emote('hero', 'Pfff…', 1.8); hero.state = 'idle'; yield c.wait(1.6);
+    yield c.walk('hero', 598, 150);
+    c.emote('arno', '!', 1); c.sfx('blip');
+    yield c.say('hero', "C'est toi le chat !");
+    exit('hero', 1100, 160);
+    exit('sandie', -100, 230);
+    c.face('arno', 1); c.pose('arno', 'idle');
+    // ---- la chasse : Bastien et Olivier ----
+    yield c.walk('arno', 705, 210);
+    c.pose('bastien', 'idle'); const bx = c.actors.bastien.x;
+    c.sfx('jump'); yield arc('bastien', c.actors.arno.x - 60, FLOOR_Y, 0.6, 90);
+    c.pose('bastien', 'cheer'); exit('bastien', -100, 240);
+    yield c.say('bastien', "Tu m'auras pas !", { mood: 'laugh' });
+    c.face('arno', -1);
+    c.sfx('jump'); yield arc('olivier', 860, FLOOR_Y - 34, 0.6, 70);
+    c.pose('olivier', 'cheer'); c.face('olivier', -1);
+    yield c.say('olivier', "Je suis perché, tu peux pas me toucher !", { mood: 'laugh' });
+    c.pose('olivier', 'idle');
+    // ---- Coline arrive, choquée ----
+    c.add('coline', CHARS.coline, -60, { face: 1, state: 'walk' });
+    yield c.walk('coline', 400, 150);
+    c.face('coline', 1); c.mood('coline', 'surprised'); c.emote('coline', '?!', 2.4);
+    yield c.wait(1.2);
+    c.face('arno', -1);
+    yield c.walk('arno', 440, 330);
+    c.sfx('blip'); c.emote('coline', '!', 1);
+    c.mood('coline', undefined);
+    yield c.say('arno', "C'est toi le chat !", { mood: 'laugh' });
+    // tout le monde file dans une direction ; Olivier descend tranquillement en sifflotant
+    c.face('arno', 1); exit('arno', 1100, 300);
+    c.face('coline', 1); c.sfx('spring'); exit('coline', 1100, 260);
+    yield c.wait(1.6);
+    yield arc('olivier', 880, FLOOR_Y, 0.7, 14);
+    c.emote('olivier', 'fiu fiu~', 4); c.face('olivier', 1);
+    yield c.walk('olivier', 1100, 70);
     yield c.fade(1, 0.6);
   },
 };
@@ -795,12 +886,12 @@ CUTS.backlog_intro = {
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 430, 300);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !', { mood: 'surprised' });
-    yield c.say('hero', 'Le backlog… Il me faut de l\'aide. Qui est dispo ?');
-    yield c.say('chef', 'Bastien. Il est derrière.');
+    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer avant ton départ !', { mood: 'surprised' });
+    yield c.say('hero', 'Le backlog… C\'est un puit sans fond ! Il va me falloir de l\'aide.');
+    yield c.say('chef', 'Va chercher Bastien. Il est derrière, je sais pas ce qu\'il nous a encore inventé celui là.');
     yield c.walk('hero', 620, 170);
     yield c.say('hero', 'Bastien ! Qu\'est-ce que tu fais ?');
-    yield c.say('bastien', 'Du sport collectif ! Olivier compte mes jongles !', { mood: 'laugh' });
+    yield c.say('bastien', 'Du sport collectif ! Olivier compte mes jongles, je tente de battre mon record', { mood: 'laugh' });
     yield c.wait(2.2);
     yield c.say('bastien', 'Olivier, attrape !', { mood: 'laugh' });
     jug.on = false; yield c.wait(0.05);
@@ -813,9 +904,9 @@ CUTS.backlog_intro = {
     yield c.wait(0.5);
     c.sfx('stomp'); yield tween(0.35, u => { oli.rot = -1.5708 * u; oli.y = FLOOR_Y + 19 * u; });
     c.burst(900, FLOOR_Y, 10, ['#e8e2d4'], 150);
-    yield c.say('hero', 'Le backlog a besoin de nous. Viens !');
+    yield c.say('hero', 'Le backlog a besoin de nous. Viens vite Padawan!');
     c.emote('bastien', '!', 1.2);
-    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…', { mood: 'surprised' });
+    yield c.say('bastien', 'Quoi ? Maintenant ? Mais je dois battre mon record…', { mood: 'surprised' });
     yield [c.walk('hero', 190, 230), c.walk('bastien', 255, 230)];
     c.sfx('spring'); c.shake(0.5);
     yield [c.walk('hero', 120, 160), c.jump('hero', 90), c.walk('bastien', 130, 160), c.jump('bastien', 90)];
@@ -934,11 +1025,11 @@ CUTS.backlog_fin = {
     c.add('chef', CHARS.chef, 640, { face: -1 }); c.add('franck', CHARS.franck, 740, { face: -1 });
     c.confetti(60);
     yield c.say('franck', 'Bon… le backlog est propre. Je rends les armes.');
-    yield c.say('chef', 'Enfin un backlog à jour ! Merci Stephan.');
+    yield c.say('chef', 'Enfin un backlog à jour ! Merci Stephan et Bastien.');
     c.pose('bastien', 'cheer');
-    yield c.say('bastien', 'Et maintenant, je peux retourner au foot ?');
+    yield c.say('bastien', 'Et maintenant, je peux retourner jouer ?');
     c.pose('bastien', 'idle');
-    yield c.say('hero', 'Après ça, tu l\'as bien mérité.');
+    yield c.say('hero', 'Après ça, tu l\'as bien mérité petit Padawan.');
   },
 };
 
@@ -1435,19 +1526,20 @@ CUTS.j0_epilogue = {
     c.spawn((function* () { let u = 0; while (pat) { u += 1 / 60; arm.y2 = FLOOR_Y - 44 + Math.sin(u * 8) * 3; yield frame1(); } })());
     yield c.say('bastien', 'Allez, ça va aller, Stephan… Suis-moi.');
     c.face('hero', 1); c.mood('hero', undefined);
-    yield c.say('hero', 'Non… On a un truc à faire tous les deux avant.');
+    yield c.say('hero', 'Non…');
+    yield c.say('hero', 'On a un truc à faire tous les deux avant.');
     pat = false; c.unprop(arm); c.face('bastien', -1);
     // le sabre laser : Stephan adoube Bastien
     c.pose('hero', 'idle');
     const sab = c.prop('sabre', 450, FLOOR_Y - 40, { rot: 0.15, len: 0, front: true });
     c.sfx('spring'); yield tween(0.5, u => { sab.len = 74 * u; });
     yield c.dim(0.4, 0.6);
-    yield c.say('hero', 'Padawan, tu n\'es plus Maître des incidents…');
+    yield c.say('hero', 'Padawan, tu n\'es plus …');
     yield tween(0.5, u => { sab.rot = lerp(0.15, 1.1, u); });
     c.sfx('spring'); c.burst(500, FLOOR_Y - 80, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.45);
     yield tween(0.3, u => { sab.rot = lerp(1.1, 1.5, u); });
     c.sfx('spring'); c.burst(485, FLOOR_Y - 60, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.4);
-    yield c.say('hero', '…tu es devenu Chevalier Jedi des incidents !');
+    yield c.say('hero', '… Chevalier Jedi des incidents tu es devenu !');
     c.sfx('win'); c.confetti(50); c.emote('bastien', '♥', 2.4);
     yield tween(0.4, u => { sab.rot = lerp(1.5, 0.15, u); });
     yield c.say('bastien', 'Merci Stephan ! Je serai digne de ce titre.', { mood: 'happy' });

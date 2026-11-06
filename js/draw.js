@@ -552,9 +552,20 @@ function drawProp(ctx, p, t) {
       msgs.forEach((m, idx) => {
         const age = Math.max(0, (t - m.t0)), a = Math.min(1, age / 0.25), yo = (1 - a) * 8, hh = m.h || 28; ctx.globalAlpha = Math.min(1, o * 1.6) * a;
         circ(ctx, L + 22, cy + 13 + yo, 12, '#dfe2f7'); drawHead(ctx, CHARS[m.key], L + 22, cy + 14 + yo, 22, {});
-        rr(ctx, L + 40, cy + yo, w - 52, (m.gif ? 60 : 26), 6, m.key === 'hero' ? '#e8ebfa' : '#fff', '#dcdce6', 1);
+        rr(ctx, L + 40, cy + yo, w - 52, (m.gif ? 60 : (m.emoji ? 36 : 26)), 6, m.key === 'hero' ? '#e8ebfa' : '#fff', '#dcdce6', 1);
         txt(ctx, m.name, L + 48, cy + 10 + yo, 10, '#464eb8', 'left', 'bold');
-        if (m.gif) {                              // petit GIF de chat
+        if (m.emoji) {                            // emoji qui rigole (visage jaune, larmes de joie)
+          const ex = L + 62, ey = cy + 23 + yo; circ(ctx, ex, ey, 9, '#ffcc33'); ctx.strokeStyle = '#6a4a00'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(ex - 3.5, ey - 2, 2, 3.5, 6); ctx.arc(ex + 3.5, ey - 2, 2, 3.5, 6); ctx.stroke();
+          ell(ctx, ex, ey + 3, 4.5, 3 + Math.abs(Math.sin(t * 9)) * 1.5, '#7a2a1a'); rect(ctx, ex - 3, ey + 1, 6, 1.6, '#fff'); circ(ctx, ex - 9, ey + 1, 1.8, '#7fc8ff'); circ(ctx, ex + 9, ey + 1, 1.8, '#7fc8ff');
+        } else if (m.gif === 'bebe') {            // GIF : bébé qui pleure
+          const gx = L + 48, gy = cy + 14 + yo; rr(ctx, gx, gy, 70, 42, 4, '#f6e3ef'); ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, 70, 42); ctx.clip();
+          ctx.translate(gx + 35, gy + 24); ctx.rotate(Math.sin(t * 6) * 0.07);
+          circ(ctx, 0, 0, 15, '#f6cfa8'); ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -15, 4, 3.4, 6); ctx.stroke();
+          ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-9, -5); ctx.lineTo(-4, -2); ctx.moveTo(-9, 1); ctx.lineTo(-4, -2); ctx.moveTo(9, -5); ctx.lineTo(4, -2); ctx.moveTo(9, 1); ctx.lineTo(4, -2); ctx.stroke();
+          ell(ctx, 0, 7, 5.5, 3.5 + Math.abs(Math.sin(t * 8)) * 2.5, '#8a2a2a'); circ(ctx, -9, 4, 2.4, 'rgba(255,120,120,.5)'); circ(ctx, 9, 4, 2.4, 'rgba(255,120,120,.5)');
+          for (let i = 0; i < 3; i++) { const q = (t * 28 + i * 9) % 26; circ(ctx, -8, 0 + q, 2, '#7fc8ff'); circ(ctx, 8, 0 + q, 2, '#7fc8ff'); }
+          ctx.restore(); rr(ctx, gx + 3, gy + 3, 20, 10, 3, 'rgba(0,0,0,.55)'); txt(ctx, 'GIF', gx + 13, gy + 11, 8, '#fff', 'center', 'bold');
+        } else if (m.gif) {                       // petit GIF de chat
           const gx = L + 48, gy = cy + 14 + yo; rr(ctx, gx, gy, 70, 42, 4, '#cfe3d4'); ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, 70, 42); ctx.clip();
           ctx.translate(gx + 35, gy + 28); ctx.rotate(Math.sin(t * 5) * 0.1);
           poly(ctx, [[-13, -6], [-9, -19], [-3, -9]], '#e58f3c'); poly(ctx, [[13, -6], [9, -19], [3, -9]], '#e58f3c'); circ(ctx, 0, 0, 14, '#f0a050');
@@ -562,9 +573,10 @@ function drawProp(ctx, p, t) {
           ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-5, 4); ctx.lineTo(-15, 2); ctx.moveTo(-5, 6); ctx.lineTo(-15, 8); ctx.moveTo(5, 4); ctx.lineTo(15, 2); ctx.moveTo(5, 6); ctx.lineTo(15, 8); ctx.stroke();
           ctx.restore(); rr(ctx, gx + 3, gy + 3, 20, 10, 3, 'rgba(0,0,0,.55)'); txt(ctx, 'GIF', gx + 13, gy + 11, 8, '#fff', 'center', 'bold');
         } else txt(ctx, m.text, L + 48, cy + 22 + yo, 12, '#222', 'left');
-        if (idx === 0 && (p.up || p.down)) {      // réactions : pouces levés / baissés
-          const ry = cy + 28 + yo; rr(ctx, L + 40, ry, 46, 17, 8.5, '#e8ebfa', '#b9bdf0', 1); drawThumb(ctx, L + 52, ry + 9, 0.8, true, '#464eb8'); txt(ctx, String(p.up || 0), L + 72, ry + 13, 11, '#464eb8', 'center', 'bold');
-          rr(ctx, L + 92, ry, 46, 17, 8.5, '#fde8ea', '#e8a6ae', 1); drawThumb(ctx, L + 104, ry + 8, 0.8, false, '#c0392b'); txt(ctx, String(p.down || 0), L + 124, ry + 13, 11, '#c0392b', 'center', 'bold');
+        const first = idx === 0 && (p.up || p.down), ru = first ? p.up : (m.up || 0), rdn = first ? p.down : (m.down || 0);
+        if (ru || rdn) {                          // réactions : pouces levés / baissés
+          const ry = cy + 28 + yo; rr(ctx, L + 40, ry, 46, 17, 8.5, '#e8ebfa', '#b9bdf0', 1); drawThumb(ctx, L + 52, ry + 9, 0.8, true, '#464eb8'); txt(ctx, String(ru || 0), L + 72, ry + 13, 11, '#464eb8', 'center', 'bold');
+          if (rdn) { rr(ctx, L + 92, ry, 46, 17, 8.5, '#fde8ea', '#e8a6ae', 1); drawThumb(ctx, L + 104, ry + 8, 0.8, false, '#c0392b'); txt(ctx, String(rdn || 0), L + 124, ry + 13, 11, '#c0392b', 'center', 'bold'); }
         }
         cy += hh;
       });
@@ -667,6 +679,11 @@ function drawProp(ctx, p, t) {
       ctx.globalAlpha = p.a === undefined ? 1 : p.a; ctx.fillStyle = '#7fc8ff'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 5, y, x, y + 4); ctx.quadraticCurveTo(x - 5, y, x, y - 6); ctx.fill(); circ(ctx, x - 1.2, y, 1.1, 'rgba(255,255,255,.9)'); ctx.globalAlpha = 1; break;
     case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
       line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
+    case 'coupe': {                               // coupe du vainqueur (x,y = centre), p.scale
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      rr(ctx, -9, 12, 18, 5, 2, '#8a5a1a'); rect(ctx, -2, 4, 4, 9, '#e0a820'); poly(ctx, [[-11, -14], [11, -14], [8, 2], [-8, 2]], '#ffd23f');
+      ctx.strokeStyle = '#e0a820'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-12, -8, 5, 1.6, 4.7); ctx.arc(12, -8, 5, -1.6, 1.5); ctx.stroke();
+      rect(ctx, -6, -12, 3, 9, 'rgba(255,255,255,.55)'); ctx.restore(); break; }
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;

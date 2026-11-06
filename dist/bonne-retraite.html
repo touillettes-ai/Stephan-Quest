@@ -751,9 +751,20 @@ function drawProp(ctx, p, t) {
       msgs.forEach((m, idx) => {
         const age = Math.max(0, (t - m.t0)), a = Math.min(1, age / 0.25), yo = (1 - a) * 8, hh = m.h || 28; ctx.globalAlpha = Math.min(1, o * 1.6) * a;
         circ(ctx, L + 22, cy + 13 + yo, 12, '#dfe2f7'); drawHead(ctx, CHARS[m.key], L + 22, cy + 14 + yo, 22, {});
-        rr(ctx, L + 40, cy + yo, w - 52, (m.gif ? 60 : 26), 6, m.key === 'hero' ? '#e8ebfa' : '#fff', '#dcdce6', 1);
+        rr(ctx, L + 40, cy + yo, w - 52, (m.gif ? 60 : (m.emoji ? 36 : 26)), 6, m.key === 'hero' ? '#e8ebfa' : '#fff', '#dcdce6', 1);
         txt(ctx, m.name, L + 48, cy + 10 + yo, 10, '#464eb8', 'left', 'bold');
-        if (m.gif) {                              // petit GIF de chat
+        if (m.emoji) {                            // emoji qui rigole (visage jaune, larmes de joie)
+          const ex = L + 62, ey = cy + 23 + yo; circ(ctx, ex, ey, 9, '#ffcc33'); ctx.strokeStyle = '#6a4a00'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(ex - 3.5, ey - 2, 2, 3.5, 6); ctx.arc(ex + 3.5, ey - 2, 2, 3.5, 6); ctx.stroke();
+          ell(ctx, ex, ey + 3, 4.5, 3 + Math.abs(Math.sin(t * 9)) * 1.5, '#7a2a1a'); rect(ctx, ex - 3, ey + 1, 6, 1.6, '#fff'); circ(ctx, ex - 9, ey + 1, 1.8, '#7fc8ff'); circ(ctx, ex + 9, ey + 1, 1.8, '#7fc8ff');
+        } else if (m.gif === 'bebe') {            // GIF : bébé qui pleure
+          const gx = L + 48, gy = cy + 14 + yo; rr(ctx, gx, gy, 70, 42, 4, '#f6e3ef'); ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, 70, 42); ctx.clip();
+          ctx.translate(gx + 35, gy + 24); ctx.rotate(Math.sin(t * 6) * 0.07);
+          circ(ctx, 0, 0, 15, '#f6cfa8'); ctx.strokeStyle = '#8a5a30'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -15, 4, 3.4, 6); ctx.stroke();
+          ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-9, -5); ctx.lineTo(-4, -2); ctx.moveTo(-9, 1); ctx.lineTo(-4, -2); ctx.moveTo(9, -5); ctx.lineTo(4, -2); ctx.moveTo(9, 1); ctx.lineTo(4, -2); ctx.stroke();
+          ell(ctx, 0, 7, 5.5, 3.5 + Math.abs(Math.sin(t * 8)) * 2.5, '#8a2a2a'); circ(ctx, -9, 4, 2.4, 'rgba(255,120,120,.5)'); circ(ctx, 9, 4, 2.4, 'rgba(255,120,120,.5)');
+          for (let i = 0; i < 3; i++) { const q = (t * 28 + i * 9) % 26; circ(ctx, -8, 0 + q, 2, '#7fc8ff'); circ(ctx, 8, 0 + q, 2, '#7fc8ff'); }
+          ctx.restore(); rr(ctx, gx + 3, gy + 3, 20, 10, 3, 'rgba(0,0,0,.55)'); txt(ctx, 'GIF', gx + 13, gy + 11, 8, '#fff', 'center', 'bold');
+        } else if (m.gif) {                       // petit GIF de chat
           const gx = L + 48, gy = cy + 14 + yo; rr(ctx, gx, gy, 70, 42, 4, '#cfe3d4'); ctx.save(); ctx.beginPath(); ctx.rect(gx, gy, 70, 42); ctx.clip();
           ctx.translate(gx + 35, gy + 28); ctx.rotate(Math.sin(t * 5) * 0.1);
           poly(ctx, [[-13, -6], [-9, -19], [-3, -9]], '#e58f3c'); poly(ctx, [[13, -6], [9, -19], [3, -9]], '#e58f3c'); circ(ctx, 0, 0, 14, '#f0a050');
@@ -761,9 +772,10 @@ function drawProp(ctx, p, t) {
           ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(-5, 4); ctx.lineTo(-15, 2); ctx.moveTo(-5, 6); ctx.lineTo(-15, 8); ctx.moveTo(5, 4); ctx.lineTo(15, 2); ctx.moveTo(5, 6); ctx.lineTo(15, 8); ctx.stroke();
           ctx.restore(); rr(ctx, gx + 3, gy + 3, 20, 10, 3, 'rgba(0,0,0,.55)'); txt(ctx, 'GIF', gx + 13, gy + 11, 8, '#fff', 'center', 'bold');
         } else txt(ctx, m.text, L + 48, cy + 22 + yo, 12, '#222', 'left');
-        if (idx === 0 && (p.up || p.down)) {      // réactions : pouces levés / baissés
-          const ry = cy + 28 + yo; rr(ctx, L + 40, ry, 46, 17, 8.5, '#e8ebfa', '#b9bdf0', 1); drawThumb(ctx, L + 52, ry + 9, 0.8, true, '#464eb8'); txt(ctx, String(p.up || 0), L + 72, ry + 13, 11, '#464eb8', 'center', 'bold');
-          rr(ctx, L + 92, ry, 46, 17, 8.5, '#fde8ea', '#e8a6ae', 1); drawThumb(ctx, L + 104, ry + 8, 0.8, false, '#c0392b'); txt(ctx, String(p.down || 0), L + 124, ry + 13, 11, '#c0392b', 'center', 'bold');
+        const first = idx === 0 && (p.up || p.down), ru = first ? p.up : (m.up || 0), rdn = first ? p.down : (m.down || 0);
+        if (ru || rdn) {                          // réactions : pouces levés / baissés
+          const ry = cy + 28 + yo; rr(ctx, L + 40, ry, 46, 17, 8.5, '#e8ebfa', '#b9bdf0', 1); drawThumb(ctx, L + 52, ry + 9, 0.8, true, '#464eb8'); txt(ctx, String(ru || 0), L + 72, ry + 13, 11, '#464eb8', 'center', 'bold');
+          if (rdn) { rr(ctx, L + 92, ry, 46, 17, 8.5, '#fde8ea', '#e8a6ae', 1); drawThumb(ctx, L + 104, ry + 8, 0.8, false, '#c0392b'); txt(ctx, String(rdn || 0), L + 124, ry + 13, 11, '#c0392b', 'center', 'bold'); }
         }
         cy += hh;
       });
@@ -866,6 +878,11 @@ function drawProp(ctx, p, t) {
       ctx.globalAlpha = p.a === undefined ? 1 : p.a; ctx.fillStyle = '#7fc8ff'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 5, y, x, y + 4); ctx.quadraticCurveTo(x - 5, y, x, y - 6); ctx.fill(); circ(ctx, x - 1.2, y, 1.1, 'rgba(255,255,255,.9)'); ctx.globalAlpha = 1; break;
     case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
       line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
+    case 'coupe': {                               // coupe du vainqueur (x,y = centre), p.scale
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+      rr(ctx, -9, 12, 18, 5, 2, '#8a5a1a'); rect(ctx, -2, 4, 4, 9, '#e0a820'); poly(ctx, [[-11, -14], [11, -14], [8, 2], [-8, 2]], '#ffd23f');
+      ctx.strokeStyle = '#e0a820'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(-12, -8, 5, 1.6, 4.7); ctx.arc(12, -8, 5, -1.6, 1.5); ctx.stroke();
+      rect(ctx, -6, -12, 3, 9, 'rgba(255,255,255,.55)'); ctx.restore(); break; }
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;
@@ -3337,25 +3354,116 @@ CUTS.j15_outro = {
 CUTS.j9_choix = {
   type: 'cutscene', bg: 'openspace',
   script: function* (c) {
-    const cast = ['hero', 'coline', 'amelie', 'sheryna', 'youssef', 'imen', 'cecile', 'franck', 'danila', 'hakim', 'matthieu', 'arno', 'justine', 'sandie', 'bastien', 'olivier'];
-    cast.forEach((k, i) => c.add(k, CHARS[k], 50 + i * 50, { face: i < 8 ? 1 : -1, state: 'idle' }));
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const arc = (k, x2, y2, dur, h) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return tween(dur, u => { a.x = lerp(x0, x2, u); a.y = lerp(y0, y2, u) - Math.sin(u * Math.PI) * h; }); };
+    const beat = sec => ({ t: 0, update(dt) { this.t += dt; return this.t >= sec || Input.confirm(); } });          // pause qu'on peut passer avec Entrée
+    const exit = (k, x, sp) => c.spawn((function* () { yield c.walk(k, x, sp || 200); c.remove(k); })());
+    // ---- décor : le bureau de Stephan à gauche, un autre bureau au fond à droite ----
+    c.prop('chair', 66, FLOOR_Y, { z: -1 }); c.prop('desk', 106, FLOOR_Y, { front: true });
+    c.prop('desk', 860, FLOOR_Y, {});
+    // ---- Arno, Sandie, Bastien et Olivier jouent à 1, 2, 3 soleil (Olivier compte, face au mur) ----
+    const X0 = { arno: 660, sandie: 705, bastien: 750 }, LIM = 845;
+    for (const k in X0) c.add(k, CHARS[k], X0[k], { face: 1 });
+    c.add('olivier', CHARS.olivier, 925, { face: 1 });
+    const gm = { finish: false, out: {}, stop: {} };
+    c.spawn((function* () {
+      for (let round = 0; !gm.finish; round++) {
+        c.face('olivier', 1); c.emote('olivier', 'Un, deux, trois…', 1.7);
+        const act = Object.keys(X0).filter(k => !gm.out[k] && !gm.stop[k]);
+        for (const k of act) { c.face(k, 1); c.pose(k, 'walk'); }
+        for (let i = 0; i < 40 && !gm.finish; i++) { for (const k of act) { const a = c.actors[k]; if (a.x < LIM - (k === 'bastien' ? 40 : k === 'sandie' ? 20 : 0)) a.x += 1.04; } yield c.wait(0.04); }
+        c.face('olivier', -1); c.emote('olivier', 'SOLEIL !', 1.2);
+        if (round === 0) {                               // Arno ne s'arrête pas à temps : il perd
+          yield c.wait(0.35); c.emote('arno', '!', 1.2);
+          for (const k of act) if (k !== 'arno') c.pose(k, 'idle');
+          yield c.wait(0.3); c.pose('arno', 'idle'); c.emote('olivier', 'Arno a bougé !', 1.6); c.emote('arno', 'Zut !', 1.6); gm.out.arno = true;
+          yield c.wait(1.2); c.face('arno', -1); yield c.walk('arno', 625, 90); c.face('arno', 1); c.pose('arno', 'idle');
+        } else { for (const k of act) c.pose(k, 'idle'); yield c.wait(1.3); }
+      }
+      for (const k of ['sandie', 'bastien']) c.pose(k, 'idle');
+    })());
     yield c.caption('Midi. Open space.', 2.2);
-    c.pose('hero', 'wave');
-    yield c.say('hero', 'On mange où, les loulous ?');
+    yield c.wait(4.2);
+    // ---- Stephan arrive ----
+    c.add('hero', CHARS.hero, -60, { face: 1, state: 'walk' });
+    yield c.walk('hero', 470, 130);
+    c.emote('hero', '?', 1.2);
+    yield c.say('hero', 'Vous faites quoi encore ?');
+    yield c.say('arno', 'Un, deux, trois, soleil ! Ça se voit pas ?', { name: 'Tout le monde', mood: 'laugh' });
+    gm.stop.bastien = true; c.pose('bastien', 'idle'); c.face('bastien', -1);
+    yield c.say('bastien', 'Tu veux participer, Stephan ?');
     c.pose('hero', 'idle');
-    yield c.wait(0.4);
-    const votes = { amelie: 'Hoki Sushi', sheryna: 'Hoki Sushi', danila: 'Hoki Sushi', sandie: 'Hoki Sushi',
-      youssef: 'Charlie\'s', imen: 'Charlie\'s', hakim: 'Charlie\'s', matthieu: 'Charlie\'s', arno: 'Charlie\'s', justine: 'Charlie\'s', olivier: 'Charlie\'s',
-      bastien: 'Cantine', franck: 'Cantine', cecile: 'Cantine', coline: 'Cantine' };
-    for (const k in votes) { c.pose(k, 'wave'); c.emote(k, votes[k], 3.6); }     // tous votent en même temps, main levée
-    c.sfx('coin');
-    yield c.wait(3.8);
-    for (const k in votes) c.pose(k, 'idle');                                    // main baissée
-    yield c.wait(0.5);
-    c.emote('hero', '?', 1.4);
-    yield c.say('hero', 'Bon. Trois camps : Charlie\'s, la cantine… et Hoki Sushi.');
-    yield c.say('hero', 'Aujourd\'hui, ce sera Hoki Sushi avec Amélie, Danila, Sandie et Sheryna !');
-    yield c.say(null, 'Les autres iront à Charlie\'s ou à la cantine. Direction Hoki Sushi.');
+    yield c.say('hero', "Non merci, j'ai des choses plus importantes à faire.");
+    c.face('bastien', 1);
+    // ---- Stephan s'assoit à son PC et tape ----
+    c.face('hero', -1); yield c.walk('hero', 70, 150);
+    const hero = c.actors.hero; c.face('hero', 1); hero.z = 1; c.pose('hero', 'sit'); hero.typing = true;
+    yield c.wait(0.8);
+    // ---- la fenêtre Teams apparaît ----
+    const teams = c.prop('teams', 400, 455, { front: true, open: 0, w: 470, h: 340, msgs: [], up: 0, down: 0, typing: null });
+    yield tween(0.6, u => { teams.open = ease(u); });
+    const post = function* (key, name, text, o) {
+      o = o || {}; teams.typing = name; yield beat(o.typing || 1.0); teams.typing = null;
+      const m = { key, name, text, t0: c.time(), h: o.h || 28, gif: o.gif, emoji: o.emoji, up: 0, down: 0 }; teams.msgs.push(m); c.sfx('blip'); yield beat(o.wait || 1.7); return m;
+    };
+    const react = (target, seq) => c.spawn((function* () { for (const [kind, w] of seq) { yield c.wait(w); target[kind]++; c.sfx('coin'); } })());
+    yield* post('hero', 'Stephan', 'Qui pour Hoki Sushi ce midi ?', { h: 46, typing: 1.3 });
+    react(teams, [['up', 0.5], ['up', 0.5], ['down', 0.8], ['up', 0.6], ['down', 0.9], ['up', 0.8], ['down', 0.9], ['up', 0.9]]);     // 5 pouces levés, 3 baissés sur le message de Stephan
+    const im = yield* post('imen', 'Imen', 'Cantoche ce midi', { h: 46 });
+    react(im, [['up', 0.4], ['up', 0.4], ['up', 0.5], ['up', 0.5]]);
+    yield* post('amelie', 'Amélie', '', { gif: 'bebe', h: 62, typing: 0.8 });
+    yield* post('danila', 'Danila', 'Oki pour Hoki lol');
+    yield* post('justine', 'Justine', '', { emoji: true, h: 40, typing: 0.7 });
+    yield* post('sheryna', 'Sheryna', 'Je vais manger un grec avec le M. À tout');
+    yield* post('hero', 'Stephan', 'Hoki Sushi réservé, on décolle à 11h57 !', { typing: 1.2, wait: 1.2 });
+    hero.typing = false; c.sfx('win');
+    yield tween(0.5, u => { teams.open = 1 - ease(u); });
+    c.unprop(teams);
+    // ---- Sandie gagne la partie ----
+    gm.finish = true; yield c.wait(0.4);
+    c.face('olivier', -1);
+    yield c.walk('sandie', 892, 230);
+    c.pose('sandie', 'cheer'); c.sfx('win'); c.confetti(40);
+    const cup = c.prop('coupe', 900, FLOOR_Y - 84, { scale: 1.2, front: true });
+    yield c.say('sandie', "Pour une fois que c'est moi qui gagne à un 1, 2, 3 soleil ! Vivement que je gagne une partie de chat !", { mood: 'laugh' });
+    c.pose('sandie', 'idle'); c.unprop(cup);
+    // ---- Stephan soupire et sort en touchant Arno ----
+    c.emote('hero', 'Pfff…', 1.8); hero.state = 'idle'; yield c.wait(1.6);
+    yield c.walk('hero', 598, 150);
+    c.emote('arno', '!', 1); c.sfx('blip');
+    yield c.say('hero', "C'est toi le chat !");
+    exit('hero', 1100, 160);
+    exit('sandie', -100, 230);
+    c.face('arno', 1); c.pose('arno', 'idle');
+    // ---- la chasse : Bastien et Olivier ----
+    yield c.walk('arno', 705, 210);
+    c.pose('bastien', 'idle'); const bx = c.actors.bastien.x;
+    c.sfx('jump'); yield arc('bastien', c.actors.arno.x - 60, FLOOR_Y, 0.6, 90);
+    c.pose('bastien', 'cheer'); exit('bastien', -100, 240);
+    yield c.say('bastien', "Tu m'auras pas !", { mood: 'laugh' });
+    c.face('arno', -1);
+    c.sfx('jump'); yield arc('olivier', 860, FLOOR_Y - 34, 0.6, 70);
+    c.pose('olivier', 'cheer'); c.face('olivier', -1);
+    yield c.say('olivier', "Je suis perché, tu peux pas me toucher !", { mood: 'laugh' });
+    c.pose('olivier', 'idle');
+    // ---- Coline arrive, choquée ----
+    c.add('coline', CHARS.coline, -60, { face: 1, state: 'walk' });
+    yield c.walk('coline', 400, 150);
+    c.face('coline', 1); c.mood('coline', 'surprised'); c.emote('coline', '?!', 2.4);
+    yield c.wait(1.2);
+    c.face('arno', -1);
+    yield c.walk('arno', 440, 330);
+    c.sfx('blip'); c.emote('coline', '!', 1);
+    c.mood('coline', undefined);
+    yield c.say('arno', "C'est toi le chat !", { mood: 'laugh' });
+    // tout le monde file dans une direction ; Olivier descend tranquillement en sifflotant
+    c.face('arno', 1); exit('arno', 1100, 300);
+    c.face('coline', 1); c.sfx('spring'); exit('coline', 1100, 260);
+    yield c.wait(1.6);
+    yield arc('olivier', 880, FLOOR_Y, 0.7, 14);
+    c.emote('olivier', 'fiu fiu~', 4); c.face('olivier', 1);
+    yield c.walk('olivier', 1100, 70);
     yield c.fade(1, 0.6);
   },
 };
@@ -3619,12 +3727,12 @@ CUTS.backlog_intro = {
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 430, 300);
     c.face('hero', 1); c.emote('chef', '!!', 2);
-    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer !', { mood: 'surprised' });
-    yield c.say('hero', 'Le backlog… Il me faut de l\'aide. Qui est dispo ?');
-    yield c.say('chef', 'Bastien. Il est derrière.');
+    yield c.say('chef', 'Stephan ! C\'est le bazar dans le backlog ! Il faut absolument le nettoyer avant ton départ !', { mood: 'surprised' });
+    yield c.say('hero', 'Le backlog… C\'est un puit sans fond ! Il va me falloir de l\'aide.');
+    yield c.say('chef', 'Va chercher Bastien. Il est derrière, je sais pas ce qu\'il nous a encore inventé celui là.');
     yield c.walk('hero', 620, 170);
     yield c.say('hero', 'Bastien ! Qu\'est-ce que tu fais ?');
-    yield c.say('bastien', 'Du sport collectif ! Olivier compte mes jongles !', { mood: 'laugh' });
+    yield c.say('bastien', 'Du sport collectif ! Olivier compte mes jongles, je tente de battre mon record', { mood: 'laugh' });
     yield c.wait(2.2);
     yield c.say('bastien', 'Olivier, attrape !', { mood: 'laugh' });
     jug.on = false; yield c.wait(0.05);
@@ -3637,9 +3745,9 @@ CUTS.backlog_intro = {
     yield c.wait(0.5);
     c.sfx('stomp'); yield tween(0.35, u => { oli.rot = -1.5708 * u; oli.y = FLOOR_Y + 19 * u; });
     c.burst(900, FLOOR_Y, 10, ['#e8e2d4'], 150);
-    yield c.say('hero', 'Le backlog a besoin de nous. Viens !');
+    yield c.say('hero', 'Le backlog a besoin de nous. Viens vite Padawan!');
     c.emote('bastien', '!', 1.2);
-    yield c.say('bastien', 'Quoi ? Maintenant ? Mais mon match…', { mood: 'surprised' });
+    yield c.say('bastien', 'Quoi ? Maintenant ? Mais je dois battre mon record…', { mood: 'surprised' });
     yield [c.walk('hero', 190, 230), c.walk('bastien', 255, 230)];
     c.sfx('spring'); c.shake(0.5);
     yield [c.walk('hero', 120, 160), c.jump('hero', 90), c.walk('bastien', 130, 160), c.jump('bastien', 90)];
@@ -3758,11 +3866,11 @@ CUTS.backlog_fin = {
     c.add('chef', CHARS.chef, 640, { face: -1 }); c.add('franck', CHARS.franck, 740, { face: -1 });
     c.confetti(60);
     yield c.say('franck', 'Bon… le backlog est propre. Je rends les armes.');
-    yield c.say('chef', 'Enfin un backlog à jour ! Merci Stephan.');
+    yield c.say('chef', 'Enfin un backlog à jour ! Merci Stephan et Bastien.');
     c.pose('bastien', 'cheer');
-    yield c.say('bastien', 'Et maintenant, je peux retourner au foot ?');
+    yield c.say('bastien', 'Et maintenant, je peux retourner jouer ?');
     c.pose('bastien', 'idle');
-    yield c.say('hero', 'Après ça, tu l\'as bien mérité.');
+    yield c.say('hero', 'Après ça, tu l\'as bien mérité petit Padawan.');
   },
 };
 
@@ -4259,19 +4367,20 @@ CUTS.j0_epilogue = {
     c.spawn((function* () { let u = 0; while (pat) { u += 1 / 60; arm.y2 = FLOOR_Y - 44 + Math.sin(u * 8) * 3; yield frame1(); } })());
     yield c.say('bastien', 'Allez, ça va aller, Stephan… Suis-moi.');
     c.face('hero', 1); c.mood('hero', undefined);
-    yield c.say('hero', 'Non… On a un truc à faire tous les deux avant.');
+    yield c.say('hero', 'Non…');
+    yield c.say('hero', 'On a un truc à faire tous les deux avant.');
     pat = false; c.unprop(arm); c.face('bastien', -1);
     // le sabre laser : Stephan adoube Bastien
     c.pose('hero', 'idle');
     const sab = c.prop('sabre', 450, FLOOR_Y - 40, { rot: 0.15, len: 0, front: true });
     c.sfx('spring'); yield tween(0.5, u => { sab.len = 74 * u; });
     yield c.dim(0.4, 0.6);
-    yield c.say('hero', 'Padawan, tu n\'es plus Maître des incidents…');
+    yield c.say('hero', 'Padawan, tu n\'es plus …');
     yield tween(0.5, u => { sab.rot = lerp(0.15, 1.1, u); });
     c.sfx('spring'); c.burst(500, FLOOR_Y - 80, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.45);
     yield tween(0.3, u => { sab.rot = lerp(1.1, 1.5, u); });
     c.sfx('spring'); c.burst(485, FLOOR_Y - 60, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.4);
-    yield c.say('hero', '…tu es devenu Chevalier Jedi des incidents !');
+    yield c.say('hero', '… Chevalier Jedi des incidents tu es devenu !');
     c.sfx('win'); c.confetti(50); c.emote('bastien', '♥', 2.4);
     yield tween(0.4, u => { sab.rot = lerp(1.5, 0.15, u); });
     yield c.say('bastien', 'Merci Stephan ! Je serai digne de ce titre.', { mood: 'happy' });
