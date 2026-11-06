@@ -298,6 +298,13 @@ function drawItem(ctx, kind, x, y, s, t, v) {
       circ(ctx, 0, 0, 7.5, '#5d6670'); circ(ctx, 0, 0, 6.6, '#a7b0ba'); ctx.strokeStyle = '#6d7782'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.arc(0, 0, 4.6, 0.4, 2.6); ctx.arc(0, 0, 2.4, 3.6, 5.8); ctx.stroke(); circ(ctx, -2.4, -2.6, 1.7, 'rgba(255,255,255,.85)'); break;
     case 'cochonnet':                             // le petit but de la pétanque
       circ(ctx, 0, 0, 3.2, '#b8860b'); circ(ctx, 0, 0, 2.6, '#f2c94c'); circ(ctx, -0.8, -0.9, 0.9, '#fff6c2'); break;
+    case 'totem':                                 // totem d'honneur de l'incident manager en chef
+      rr(ctx, -8, -20, 16, 42, 3, '#8a5a2b', '#4a2e12', 1.2);
+      poly(ctx, [[-16, -12], [-8, -21], [-8, -6]], '#c0392b'); poly(ctx, [[16, -12], [8, -21], [8, -6]], '#c0392b');
+      rect(ctx, -6, -17, 12, 9, '#e0b070'); circ(ctx, -2.6, -13, 1.6, '#222'); circ(ctx, 2.6, -13, 1.6, '#222'); rect(ctx, -3.5, -9.5, 7, 1.8, '#c0392b');
+      rect(ctx, -6, -6, 12, 10, '#2f7fd1'); circ(ctx, -2.6, -2, 1.7, '#fff'); circ(ctx, 2.6, -2, 1.7, '#fff'); circ(ctx, -2.6, -2, 0.8, '#222'); circ(ctx, 2.6, -2, 0.8, '#222'); rect(ctx, -3, 1.4, 6, 1.6, '#fff');
+      rect(ctx, -6, 6, 12, 12, '#7a9f3a'); rect(ctx, -4, 9, 3, 3, '#222'); rect(ctx, 1, 9, 3, 3, '#222'); rect(ctx, -3, 14, 6, 2, '#222');
+      ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 3 : 7, an = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(Math.cos(an) * r, -27 + Math.sin(an) * r); } ctx.closePath(); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.strokeStyle = '#e09a00'; ctx.lineWidth = 1; ctx.stroke(); break;
     case 'basket':                                // ballon de basket
       circ(ctx, 0, 0, 11, '#e8762c'); ctx.strokeStyle = '#3a1c0c'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, 11, 0, 6.2832); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.moveTo(0, -11); ctx.lineTo(0, 11);
       ctx.moveTo(-7.8, -7.8); ctx.quadraticCurveTo(-3, 0, -7.8, 7.8); ctx.moveTo(7.8, -7.8); ctx.quadraticCurveTo(3, 0, 7.8, 7.8); ctx.stroke(); break;
@@ -385,7 +392,7 @@ function drawItem(ctx, kind, x, y, s, t, v) {
   }
   ctx.restore();
 }
-const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'basket', 'boule', 'cochonnet', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
+const ITEM_KINDS = ['tapas', 'ticketbl', 'ballon', 'basket', 'totem', 'boule', 'cochonnet', 'carotte', 'chocolat', 'papier', 'malette', 'bureau', 'maki', 'sushi', 'brochette', 'logi', 'ticket', 'slip', 'tshirt', 'pantalon', 'entrecote', 'frites', 'biere', 'cadeau', 'plat', 'cafe', 'courrier', 'star'];
 
 /* ============================================================
    ENNEMIS / OBSTACLES   (pieds en y, centrés sur x)
@@ -809,7 +816,7 @@ BG.circuit = (ctx, cx, t) => {
 };
 BG.pi = (ctx, cx, t) => {
   vgrad(ctx, 0, H, '#1c2038', '#0c0f20');
-  rr(ctx, 230, 38, 500, 230, 8, '#0f2742', '#8fa6ff', 5); txt(ctx, 'DERNIER PI', 480, 110, 44, '#ffe08a', 'center'); txt(ctx, 'PI PLANNING · Delivery Team', 480, 150, 20, '#cfd8ff', 'center');
+  rr(ctx, 230, 38, 500, 230, 8, '#0f2742', '#8fa6ff', 5); txt(ctx, 'PI 2026 T4', 480, 110, 44, '#ffe08a', 'center'); txt(ctx, 'PI PLANNING · Delivery Team', 480, 150, 20, '#cfd8ff', 'center');
   for (let i = 0; i < 5; i++) rr(ctx, 270, 180 + i * 16, 80 + hash(i * 3) * 280, 8, 3, '#2f7fd1');
   rect(ctx, 0, 0, 80, FLOOR_Y, '#7a1e2e'); rect(ctx, W - 80, 0, 80, FLOOR_Y, '#7a1e2e'); rect(ctx, 0, 0, W, 26, '#5e1522');
   for (let i = 0; i < 4; i++) { rect(ctx, 14 + i * 16, 0, 3, FLOOR_Y, 'rgba(0,0,0,.25)'); rect(ctx, W - 80 + 14 + i * 16, 0, 3, FLOOR_Y, 'rgba(0,0,0,.25)'); }

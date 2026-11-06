@@ -945,6 +945,16 @@ CUTS.j3_pi_salle = {
     yield c.caption('Livraison n°1 : le logigramme géant, enfin en un seul morceau.', 2.6);
     yield c.caption('Livraison n°2 : la crise cyber, résolue avec un déhanché.', 2.6);
     yield c.caption('Livraison n°3 : une valise, enfin refermée.', 2.6);
+    // Franck rejoint Cécile sur scène, annonce les rollbacks et salue la foule en délire
+    c.add('franck', CHARS.franck, 1040, { y: FLOOR_Y - 30, face: -1, state: 'walk' });
+    yield c.walk('franck', 600, 130);
+    c.face('franck', -1);
+    yield c.say('franck', "Sur ce PI, on prévoit seulement 9 rollbacks de prepa v2.");
+    foule.cheer = true; c.sfx('win'); c.pose('franck', 'wave'); c.pose('cecile', 'wave');
+    yield c.say('franck', 'Bonne journée à tous !');
+    c.pose('franck', 'idle'); c.pose('cecile', 'idle'); foule.cheer = false;
+    yield c.walk('franck', 1130, 150);
+    c.remove('franck');
     c.add('hero', CHARS.hero, -60, { state: 'walk' }); c.add('lapin', CHARS.lapin, -140, { state: 'walk' });
     yield [c.walk('hero', 300, 170), c.walk('lapin', 230, 170)];
     yield c.say('hero', 'Voilà, on l\'a ramené !');
@@ -959,7 +969,79 @@ CUTS.j3_pi_salle = {
     yield c.say('lapin', 'Le PI est dorénavant ouvert !');
     c.pose('coline', 'cheer'); c.pose('amelie', 'cheer'); c.pose('cecile', 'cheer'); c.pose('hero', 'cheer');
     c.confetti(100); c.rain(100);
-    yield c.wait(2);
+    yield c.wait(1.2);
+    // ---- le totem d'honneur ----
+    const SY = FLOOR_Y - 30;                                              // hauteur de la scène
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const arc = (k, x2, y2, dur, h, rot) => { const a = c.actors[k], x0 = a.x, y0 = a.y; return { t: 0, update(dt) { this.t += dt; const p = Math.min(1, this.t / dur); a.x = lerp(x0, x2, p); a.y = lerp(y0, y2, p) - Math.sin(p * Math.PI) * h; a.rot = (rot || 0) * p; return p >= 1; } }; };
+    const lobP = (p, x2, y2, dur, h) => { const x0 = p.x, y0 = p.y; return { t: 0, update(dt) { this.t += dt; const k = Math.min(1, this.t / dur); p.x = lerp(x0, x2, k); p.y = lerp(y0, y2, k) - Math.sin(k * Math.PI) * h; return k >= 1; } }; };
+    const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
+    const follow = (p, k, dx, dy) => { const h = { on: true }; c.spawn((function* () { while (h.on) { const a = c.actors[k]; p.x = a.x + dx; p.y = a.y + dy; yield frame1(); } })()); return h; };
+    for (const k of ['coline', 'amelie', 'cecile', 'hero', 'lapin']) c.pose(k, 'idle');
+    // Coline monte sur scène
+    yield c.walk('coline', 255, 150);
+    c.sfx('jump'); yield arc('coline', 330, SY, 0.55, 40, 0);
+    yield c.walk('coline', 470, 130); c.face('coline', -1);
+    yield c.say('coline', "Et c'est le dernier PI avec Stephan ! Pour l'occasion, je vais lui remettre un Totem d'honneur.");
+    // Stephan monte sur scène en faisant un salto
+    c.face('hero', 1); c.sfx('jump');
+    yield arc('hero', 380, SY, 0.95, 100, -6.2832 * 1);
+    c.actors.hero.rot = 0; c.actors.hero.state = 'idle'; c.sfx('stomp'); c.shake(0.2); c.face('hero', 1);
+    const totem = c.prop('totem', 462, SY - 46, { lift: 0, scale: 1.25, front: true });
+    c.face('coline', -1);
+    const hc = follow(totem, 'coline', -14, -46);
+    yield c.say('coline', "Stephan, voici le totem de l'incident manager en chef !");
+    hc.on = false; c.sfx('blip');
+    yield lobP(totem, 394, SY - 48, 0.5, 30);
+    const ht = follow(totem, 'hero', 14, -46);
+    // Stephan lève fièrement le totem
+    c.pose('hero', 'cheer'); c.sfx('win'); c.confetti(40);
+    ht.on = false; const hup = follow(totem, 'hero', 6, -128);
+    yield c.wait(1.2);
+    // Bastien arrive d'un côté, Olivier de l'autre
+    c.add('bastien', CHARS.bastien, -60, { face: 1, state: 'walk' });
+    c.add('olivier', CHARS.olivier, 1040, { y: SY, face: -1, state: 'walk' });
+    yield all([c.walk('bastien', 255, 300), c.walk('olivier', 440, 300)]);
+    c.sfx('jump'); yield arc('bastien', 345, SY, 0.5, 40, 0);
+    yield c.walk('olivier', 410, 140); c.face('bastien', 1); c.face('olivier', -1); c.actors.hero.z = 3;
+    yield c.say('bastien', 'Steph ! Steph ! Steph !', { name: 'Bastien et Olivier', mood: 'laugh' });
+    // ils le portent en triomphe : on le monte, on le descend, en boucle
+    const BASE = SY - 52;
+    c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer');
+    const hero = c.actors.hero, bas = c.actors.bastien, oli = c.actors.olivier;
+    hero.y = BASE; hero.x = 378; bas.x = 352; oli.x = 408; hup.on = false; const hu2 = follow(totem, 'hero', 6, -128);
+    const lift = (dur, from, to, sb) => ({ t: 0, update(dt) { this.t += dt; const k = ease(Math.min(1, this.t / dur)); hero.y = BASE - lerp(from, to, k); bas.y = oli.y = SY - sb * Math.sin(k * Math.PI) * 6; return this.t >= dur; } });
+    for (let i = 0; i < 4; i++) {
+      c.sfx('jump'); c.emote('bastien', 'STEPH !', 0.8); c.emote('olivier', 'STEPH !', 0.8);
+      yield lift(0.42 - i * 0.03, 0, 40, 1);
+      yield lift(0.42 - i * 0.03, 40, 0, 1);
+    }
+    // … et soudain, ils le jettent en l'air : Stephan s'écrase dans l'écran du fond
+    c.sfx('jump'); hu2.on = false; const hu3 = follow(totem, 'hero', 6, -128);
+    yield arc('hero', 480, 200, 0.85, 50, 12.566);
+    hu3.on = false; c.shake(0.5); c.sfx('hurt'); c.sfx('stomp');
+    c.prop('vitrecassee', 480, 150, { r: 52 });
+    c.burst(480, 150, 40, ['#d9ecff', '#ffffff', '#8fa6ff'], 380);
+    hero.rot = 0.22; hero.state = 'hurt'; c.mood('hero', 'surprised'); hero.talking = false;
+    yield lobP(totem, 438, SY - 14, 0.7, 25);
+    yield c.wait(0.6);
+    // Bastien et Olivier : oups, puis ils s'envolent
+    c.pose('bastien', 'idle'); c.pose('olivier', 'idle'); c.face('bastien', -1); c.face('olivier', -1);
+    c.emote('bastien', '!', 1.2); c.emote('olivier', '!', 1.2);
+    yield c.say('bastien', 'Oups !', { name: 'Bastien et Olivier', mood: 'surprised' });
+    c.pose('bastien', 'jump'); c.pose('olivier', 'jump');
+    yield c.say('bastien', 'À plus tard tout le monde !', { name: 'Bastien et Olivier', mood: 'laugh' });
+    c.sfx('jump');
+    yield all([arc('bastien', -220, -170, 1.3, 40, -0.7), arc('olivier', 1180, -170, 1.3, 40, 0.7)]);
+    c.remove('bastien'); c.remove('olivier');
+    // Coline, morte de honte… et Stephan retombe de l'écran
+    c.mood('coline', 'sad'); c.emote('coline', '...', 2.4);
+    yield c.say('coline', 'Bon… continuons.', { mood: 'sad' });
+    c.mood('coline', undefined);
+    c.sfx('hurt');
+    yield arc('hero', 392, SY + 19, 0.55, 0, 0);
+    hero.rot = -1.5708; hero.state = 'hurt'; hero.y = SY + 19; c.sfx('stomp'); c.shake(0.3); c.burst(392, SY, 10, ['#e8e2d4'], 150);
+    yield c.wait(2.4);
   },
 };
 
