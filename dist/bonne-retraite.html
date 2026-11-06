@@ -858,6 +858,14 @@ function drawProp(ctx, p, t) {
       const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.fillStyle = '#ff4f7f'; ctx.strokeStyle = '#b3204f'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-14, -2, -8, -13, 0, -5); ctx.bezierCurveTo(8, -13, 14, -2, 0, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
       circ(ctx, -4, -4, 1.8, 'rgba(255,255,255,.8)'); ctx.restore(); break; }
+    case 'sabre': {                               // sabre laser (x,y = poignée), lame vers le haut, rotation p.rot, couleur p.c, longueur p.len
+      ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0); const c0 = p.c || '#3fd0ff', len = (p.len === undefined ? 74 : p.len);
+      if (len > 0) { for (const [w, a] of [[14, 0.16], [9, 0.3], [5, 1]]) { ctx.globalAlpha = a; ctx.strokeStyle = w === 5 ? '#ffffff' : c0; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, -len); ctx.stroke(); } ctx.globalAlpha = 1; }
+      rr(ctx, -2.5, -4, 5, 15, 1.5, '#9aa0aa', '#4a4f5a', 1); rect(ctx, -3, 2, 6, 2, '#2a2a2a'); ctx.restore(); break; }
+    case 'larme':                                 // larme (x,y), opacité p.a
+      ctx.globalAlpha = p.a === undefined ? 1 : p.a; ctx.fillStyle = '#7fc8ff'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 5, y, x, y + 4); ctx.quadraticCurveTo(x - 5, y, x, y - 6); ctx.fill(); circ(ctx, x - 1.2, y, 1.1, 'rgba(255,255,255,.9)'); ctx.globalAlpha = 1; break;
+    case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
+      line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;
@@ -947,6 +955,7 @@ const THEMES = {
   circuit:   { floor: '#0a2a20', floorTop: '#c9a24a', plat: '#14543c', platTop: '#d9b64a', label: 'Carte mère' },
   pi:        { floor: '#2b2238', floorTop: '#5a4a6b', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle PI' },
   reunion:   { floor: '#3b2f45', floorTop: '#6a5580', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle de réunion' },
+  parking:   { floor: '#2e3138', floorTop: '#555b68', plat: '#4a4f5a', platTop: '#7a8190', label: 'Parking' },
   bar:       { floor: '#241638', floorTop: '#ff4fa3', plat: '#4b2a1a', platTop: '#ff9a3c', label: 'Le bar' },
 };
 function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
@@ -966,6 +975,7 @@ function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
     case 'train':     rect(ctx, px, py + 15, TILE, 2, 'rgba(0,0,0,.2)'); circ(ctx, px + 5, py + 5, 1.5, 'rgba(255,255,255,.25)'); circ(ctx, px + TILE - 5, py + 5, 1.5, 'rgba(255,255,255,.25)'); break;
     case 'japonais':  rect(ctx, px, py + TILE - 2, TILE, 2, '#6e5833'); rect(ctx, px + 15, py, 2, TILE, 'rgba(110,88,51,.4)'); break;
     case 'gastro':    rect(ctx, px, py + TILE - 1, TILE, 1, 'rgba(201,162,74,.35)'); rect(ctx, px + ((ty & 1) ? 8 : 20), py, 1, TILE, 'rgba(0,0,0,.35)'); break;
+    case 'parking':   if (tx % 5 === 0) rect(ctx, px + 14, py, 3, TILE, 'rgba(255,255,255,.5)'); break;
     case 'bar':       rect(ctx, px, py + TILE - 1, TILE, 1, 'rgba(255,79,163,.25)'); break;
     case 'circuit':   rect(ctx, px + 8 + ((tx & 1) ? 10 : 0), py, 2, TILE, 'rgba(212,175,55,.3)'); rect(ctx, px, py + 20, TILE, 2, 'rgba(212,175,55,.22)'); circ(ctx, px + 9 + ((tx & 1) ? 10 : 0), py + 21, 2.4, 'rgba(255,230,120,.4)'); break;
   }
@@ -1119,6 +1129,16 @@ BG.mozart = (ctx, cx, t) => {
   rect(ctx, 0, FLOOR_Y - 150, W, 6, 'rgba(0,0,0,.15)');
 };
 THEMES.mozart = THEMES.reunion;
+/* Parking de nuit (épilogue) : ciel étoilé, lune, immeubles, lampadaires */
+BG.parking = (ctx, cx, t) => {
+  vgrad(ctx, 0, H, '#070b24', '#2a3560');
+  for (let i = 0; i < 70; i++) { ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 1.5 + i)); rect(ctx, hash(i) * W, hash(i + 40) * 300, 2, 2, '#fff'); } ctx.globalAlpha = 1;
+  circ(ctx, 800, 90, 34, '#f4f1d4'); circ(ctx, 814, 84, 29, '#0f1636');
+  for (let i = 0; i < 9; i++) { const bx = i * 120 - 10, bh = 90 + hash(i * 3) * 120; rect(ctx, bx, FLOOR_Y - bh - 20, 104, bh + 20, '#141b3a'); for (let k = 0; k < 8; k++) if (hash(i * 11 + k) > 0.55) rect(ctx, bx + 10 + (k % 4) * 22, FLOOR_Y - bh - 8 + Math.floor(k / 4) * 30, 12, 16, '#ffe08a'); }
+  rect(ctx, 0, FLOOR_Y - 56, W, 56, '#1b2040'); rect(ctx, 0, FLOOR_Y - 60, W, 6, '#2c3358');
+  rr(ctx, 40, FLOOR_Y - 128, 52, 52, 8, '#2f7fd1', '#fff', 4); txt(ctx, 'P', 66, FLOOR_Y - 88, 40, '#fff', 'center');
+  for (const lx of [200, 520, 860]) { rect(ctx, lx - 3, FLOOR_Y - 220, 6, 220, '#30364f'); rect(ctx, lx - 3, FLOOR_Y - 224, 40, 6, '#30364f'); ctx.globalAlpha = 0.14; poly(ctx, [[lx + 24, FLOOR_Y - 216], [lx + 110, FLOOR_Y], [lx - 60, FLOOR_Y]], '#ffe9a8'); ctx.globalAlpha = 1; circ(ctx, lx + 34, FLOOR_Y - 214, 7, '#fff2b8'); }
+};
 /* Open space avec une fenêtre brisée (chapitre « Le logigramme » : clin d'œil à Bastien et Olivier qui ont traversé la vitre du train) */
 BG.openspaceBrisee = (ctx, cx, t) => {
   BG.openspace(ctx, cx, t);
@@ -1298,7 +1318,7 @@ class Game {
    ============================================================ */
 function runStep(game, ci, si) {
   const ch = STORY[ci];
-  if (!ch) { game.go(new CreditsScene(game)); return; }
+  if (!ch) { game.go(new CreditsScene(game, true)); return; }
   if (si === -1) { game.go(new ChapterCard(game, ch, () => runStep(game, ci, 0))); return; }
   const step = ch.steps[si];
   if (!step) { runStep(game, ci + 1, -1); return; }
@@ -1348,7 +1368,7 @@ class CutScene {
   enter() {
     this.t = 0; this.bg = this.def.bg || 'openspace'; this.theme = this.def.theme || this.bg; this.worldW = this.def.worldW || W;
     this.cam = 0; this.follow = null; this.actors = {}; this.props = []; this.dlg = null; this.caption = null; this.card = null;
-    this.bgw = []; this.black = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
+    this.bgw = []; this.black = 0; this.dim = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
     this.api = this.makeApi();
     this.gen = this.def.script(this.api);
     this.advance();
@@ -1417,6 +1437,7 @@ class CutScene {
       /* --- caméra & effets --- */
       cam(x, dur) { const x0 = S.cam; S.follow = null; return timer(dur || 1, p => { S.cam = lerp(x0, clamp(x, 0, Math.max(0, S.worldW - W)), p); }); },
       follow(k) { S.follow = k ? A(k) : null; },
+      dim(to, dur) { const f0 = S.dim; return timer(dur || 0.6, p => { S.dim = lerp(f0, to, p); }); },     // assombrit le décor (pas les dialogues)
       fade(to, dur) { const f0 = S.black; return timer(dur || 0.6, p => { S.black = lerp(f0, to, p); }); },
       shake(sec) { S.shake = sec; },
       sfx(n) { Sfx.play(n); },
@@ -1460,6 +1481,7 @@ class CutScene {
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);
     ctx.restore();
+    if (this.dim > 0) { ctx.fillStyle = 'rgba(4,6,20,' + this.dim + ')'; ctx.fillRect(0, 0, W, H); }
     if (this.caption) { const c = this.caption; ctx.font = 'bold 22px ' + FONT; const w = ctx.measureText(c.text).width + 40; rr(ctx, W / 2 - w / 2, 22, w, 44, 12, 'rgba(14,18,34,.85)', '#8fa6ff', 2); txt(ctx, c.text, W / 2, 52, 22, '#fff', 'center'); }
     if (this.dlg) drawDialogue(ctx, this.dlg, this.t);
     if (this.black > 0) { ctx.fillStyle = 'rgba(0,0,0,' + this.black + ')'; ctx.fillRect(0, 0, W, H); }
@@ -1988,11 +2010,11 @@ class TitleScene {
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 4) burst(this.parts, rnd(60, 900), 0, 3, CONFETTI, 30);
-    if (Input.menuUp()) { this.sel = (this.sel + 2) % 3; Sfx.play('blip'); } else if (Input.menuDown()) { this.sel = (this.sel + 1) % 3; Sfx.play('blip'); }
-    if (Input.tap) for (let i = 0; i < 3; i++) { const y = 254 + i * 50; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
+    if (Input.menuUp()) { this.sel = (this.sel + 3) % 4; Sfx.play('blip'); } else if (Input.menuDown()) { this.sel = (this.sel + 1) % 4; Sfx.play('blip'); }
+    if (Input.tap) for (let i = 0; i < 4; i++) { const y = 246 + i * 48; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
     if (Input.confirm()) this.go();
   }
-  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else this.game.go(new MiniGameSelect(this.game)); }
+  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else if (this.sel === 2) this.game.go(new MiniGameSelect(this.game)); else this.game.go(new CreditsScene(this.game, false)); }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) { drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE); ctx.globalAlpha = 0.3; rect(ctx, x, y, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(x / TILE + y / TILE + Math.floor(this.t * 1.6)) % 4]); ctx.globalAlpha = 1; }
@@ -2004,8 +2026,8 @@ class TitleScene {
     const ry = ty0 + (tl.length - 1) * 64 + 24;
     rr(ctx, W / 2 - 270, ry, 540, 44, 10, '#d6402f', '#fff', 3); poly(ctx, [[W / 2 - 270, ry + 14], [W / 2 - 296, ry + 14], [W / 2 - 280, ry + 22], [W / 2 - 296, ry + 32], [W / 2 - 270, ry + 32]], '#a02a1e'); poly(ctx, [[W / 2 + 270, ry + 14], [W / 2 + 296, ry + 14], [W / 2 + 280, ry + 22], [W / 2 + 296, ry + 32], [W / 2 + 270, ry + 32]], '#a02a1e');
     txt(ctx, CONFIG.subtitle, W / 2, ry + 31, 24, '#fff', 'center');
-    ['Jouer', 'Choisir un chapitre', 'Mini-jeux'].forEach((s, i) => {
-      const y = 254 + i * 50, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
+    ['Jouer', 'Choisir un chapitre', 'Mini-jeux', 'Crédits'].forEach((s, i) => {
+      const y = 246 + i * 48, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
       if (on) { ctx.globalAlpha = 0.35; rr(ctx, W / 2 - 190, y - 32, 380, 50, 25, '#ffd23f'); ctx.globalAlpha = 1; }
       rr(ctx, W / 2 - 170, y - 28, 340, 44, 22, on ? '#ffd23f' : 'rgba(20,16,44,.88)', on ? '#fff' : 'rgba(255,255,255,.35)', 2.5);
       txt(ctx, s, W / 2, y + 2, 25, on ? '#2a1a3e' : '#fff', 'center');
@@ -2758,21 +2780,43 @@ class ChapterCard {
 }
 
 class CreditsScene {
-  constructor(game) { this.game = game; }
-  enter() { this.t = 0; this.parts = []; this.cast = ['coline', 'amelie', 'cecile', 'danila', 'hero', 'sheryna', 'bastien', 'olivier', 'arno', 'chef'].map((k, i) => ({ ch: CHARS[k], x: 90 + i * 86, t: i * 0.5 })); }
+  // story = true : lancé à la fin de l'histoire → après le défilé, les invités partent un par un puis l'épilogue (CUTS.j0_epilogue) ; false : depuis le menu
+  constructor(game, story) { this.game = game; this.story = !!story; }
+  enter() {
+    this.t = 0; this.parts = []; this.leave = -1; this.done = false; this.goneT = 0;
+    this.endT = (440 + CONFIG.credits.length * 40) / 38;
+    this.cast = ['coline', 'amelie', 'cecile', 'danila', 'hero', 'sheryna', 'bastien', 'olivier', 'arno', 'chef'].map((k, i) => ({ k, ch: CHARS[k], x: 90 + i * 86, t: i * 0.5, go: -1, dir: 1 }));
+  }
+  finish() {
+    this.done = true;
+    if (this.story) this.game.go(new CutScene(this.game, CUTS.j0_epilogue, () => this.game.go(new TitleScene(this.game))));
+  }
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 8) rain(this.parts, 2, CONFETTI);
-    if (this.t > 2 && Input.confirm()) this.game.go(new TitleScene(this.game));
+    if (this.leave < 0 && this.t >= this.endT) this.leave = this.t;
+    if (this.t > 2 && Input.confirm()) {
+      if (!this.story) { this.game.go(new TitleScene(this.game)); return; }
+      if (this.leave < 0) { this.t = Math.max(this.t, this.endT); this.leave = this.t; } else if (!this.done) { this.finish(); return; }
+    }
+    if (this.leave >= 0) {
+      const others = this.cast.filter(c => c.k !== 'hero');
+      others.forEach((c, i) => {
+        if (c.go < 0 && this.t >= this.leave + 0.9 * i) { c.go = this.t; c.dir = c.x < 434 ? -1 : 1; }
+        if (c.go >= 0) c.x += c.dir * 230 * dt;
+      });
+      if (others.every(c => c.x < -70 || c.x > W + 70)) { this.goneT += dt; if (this.goneT > 1.2 && !this.done) this.finish(); }
+    }
   }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE);
-    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, FLOOR_Y, { facing: -1, state: 'cheer', t: c.t });
+    const alone = this.cast.every(c => c.k === 'hero' || (c.go >= 0 && (c.x < -70 || c.x > W + 70)));
+    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, FLOOR_Y, { facing: c.go >= 0 ? c.dir : -1, state: c.go >= 0 ? 'walk' : (c.k === 'hero' && alone ? 'idle' : 'cheer'), t: c.t });
     drawParticles(ctx, this.parts);
     ctx.fillStyle = 'rgba(8,6,20,.6)'; ctx.fillRect(0, 0, W, 360);
     CONFIG.credits.forEach((l, i) => { const y = 440 - this.t * 38 + i * 40; if (y > -40 && y < 350) txt(ctx, l, W / 2, y, l.startsWith('★') ? 34 : 22, l.startsWith('★') ? '#ffd23f' : '#fff', 'center'); });
-    if (this.t > 2 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée : retour au titre', W / 2, H - 14, 16, '#fff', 'center');
+    if (this.t > 2 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, this.story ? 'Entrée : passer' : 'Entrée : retour au titre', W / 2, H - 14, 16, '#fff', 'center');
   }
 }
 
@@ -4184,6 +4228,95 @@ CUTS.j0_fin = {
     yield c.wait(0.8);
     yield c.fade(1, 1.2);
     yield c.card('FIN', 'Bonne retraite, ' + CONFIG.hero + ' !', 3.2);
+  },
+};
+
+/* Épilogue (après le générique, quand tout le monde est parti) : Stephan seul, Bastien adoubé au sabre laser, parking et feu d'artifice.
+   Test visuel : test/shot.html#cut/j0_epilogue/6 */
+CUTS.j0_epilogue = {
+  type: 'cutscene', bg: 'bar',
+  script: function* (c) {
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const FIRE = ['#ff5a5a', '#ffd23f', '#5ad1ff', '#7dff7d', '#ff7ad9', '#ffffff'];
+    c.add('hero', CHARS.hero, 434, { face: -1 });
+    const hero = c.actors.hero;
+    yield c.wait(1.2);
+    yield c.say('hero', 'Ils me manquent déjà, mes petits loulous…', { mood: 'sad' });
+    // la lumière baisse, Stephan verse une larme
+    c.mood('hero', 'sad');
+    yield c.dim(0.55, 2.2);
+    const tear = c.prop('larme', 426, FLOOR_Y - 70, { a: 0, front: true });
+    yield tween(2.2, u => { tear.a = Math.min(1, u * 5) * (1 - Math.max(0, (u - 0.85) * 6.6)); tear.y = lerp(FLOOR_Y - 70, FLOOR_Y - 34, u * u); });
+    c.unprop(tear);
+    yield c.wait(0.6);
+    // Bastien arrive derrière lui et lui met la main dans le dos
+    c.add('bastien', CHARS.bastien, 1030, { face: -1, state: 'walk' });
+    yield c.walk('bastien', 474, 120);
+    c.face('bastien', -1);
+    const arm = c.prop('bras', 466, FLOOR_Y - 42, { x2: 446, y2: FLOOR_Y - 44, c: CHARS.bastien.top, skin: CHARS.bastien.skin, front: true });
+    let pat = true;
+    c.spawn((function* () { let u = 0; while (pat) { u += 1 / 60; arm.y2 = FLOOR_Y - 44 + Math.sin(u * 8) * 3; yield frame1(); } })());
+    yield c.say('bastien', 'Allez, ça va aller, Stephan… Suis-moi.');
+    c.face('hero', 1); c.mood('hero', undefined);
+    yield c.say('hero', 'Non… On a un truc à faire tous les deux avant.');
+    pat = false; c.unprop(arm); c.face('bastien', -1);
+    // le sabre laser : Stephan adoube Bastien
+    c.pose('hero', 'idle');
+    const sab = c.prop('sabre', 450, FLOOR_Y - 40, { rot: 0.15, len: 0, front: true });
+    c.sfx('spring'); yield tween(0.5, u => { sab.len = 74 * u; });
+    yield c.dim(0.4, 0.6);
+    yield c.say('hero', 'Padawan, tu n\'es plus Maître des incidents…');
+    yield tween(0.5, u => { sab.rot = lerp(0.15, 1.1, u); });
+    c.sfx('spring'); c.burst(500, FLOOR_Y - 80, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.45);
+    yield tween(0.3, u => { sab.rot = lerp(1.1, 1.5, u); });
+    c.sfx('spring'); c.burst(485, FLOOR_Y - 60, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.4);
+    yield c.say('hero', '…tu es devenu Chevalier Jedi des incidents !');
+    c.sfx('win'); c.confetti(50); c.emote('bastien', '♥', 2.4);
+    yield tween(0.4, u => { sab.rot = lerp(1.5, 0.15, u); });
+    yield c.say('bastien', 'Merci Stephan ! Je serai digne de ce titre.', { mood: 'happy' });
+    c.sfx('spring'); yield tween(0.4, u => { sab.len = 74 * (1 - u); }); c.unprop(sab);
+    c.face('bastien', 1);
+    yield c.say('bastien', 'Maintenant, suis-moi !');
+    yield c.say('hero', 'Allons-y !');
+    yield [c.walk('bastien', 1100, 170), c.walk('hero', 1060, 170)];
+    c.remove('bastien'); c.remove('hero');
+    // ---- le parking, vide à part la voiture de Sandie ----
+    yield c.fade(1, 0.9);
+    yield c.dim(0, 0.01);
+    c.bg('parking'); c.prop('twingo', 760, FLOOR_Y - 6, { col: '#3aa65a', face: -1 });
+    yield c.fade(0, 1);
+    yield c.caption('Un parking. Vide… ou presque.', 2.4);
+    c.add('bastien', CHARS.bastien, -70, { face: 1, state: 'walk' }); c.add('hero', CHARS.hero, -150, { face: 1, state: 'walk' });
+    yield [c.walk('bastien', 450, 150), c.walk('hero', 380, 150)];
+    c.face('hero', 1); c.face('bastien', -1);
+    c.emote('hero', '?', 1.4);
+    yield c.say('hero', 'Un parking ? Mais… il n\'y a personne.');
+    yield c.say('bastien', 'Tu crois ?', { mood: 'laugh' });
+    // tout le monde surgit
+    const X = {}; for (const [k, x] of FETE_GUESTS) X[k] = x;
+    const ws = [];
+    for (const [k, x] of FETE_GUESTS) {
+      if (k === 'bastien') continue;
+      const tx = k === 'sandie' ? 690 : Math.min(900, Math.max(60, x)), l = tx < 480;
+      c.add(k, k === 'matthieu' ? CHARS.cowboy : CHARS[k], l ? -80 : 1040, { face: l ? 1 : -1, state: 'walk' });
+      ws.push(c.walk(k, tx, 260));
+    }
+    c.emote('hero', '!!', 2); c.sfx('win');
+    yield ws;
+    for (const k of Object.keys(c.actors)) { if (k !== 'hero') c.face(k, c.actors[k].x < 380 ? 1 : -1); c.pose(k, 'cheer'); }
+    c.face('hero', 1); c.confetti(60);
+    yield c.say('coline', 'Bonne continuation Stephan !', { name: 'Tout le monde', mood: 'laugh' });
+    // ---- feu d'artifice ----
+    const shoot = (x, y) => c.spawn((function* () {
+      for (let k = 0; k < 6; k++) { c.burst(x, lerp(FLOOR_Y - 70, y, k / 5), 3, ['#ffe08a'], 45); yield c.wait(0.06); }
+      c.sfx('pop'); c.burst(x, y, 90, FIRE, 680); c.burst(x, y, 30, ['#ffffff'], 300);
+    })());
+    c.sfx('spring');
+    for (let i = 0; i < 12; i++) { shoot(130 + Math.random() * 700, 70 + Math.random() * 150); if (i % 3 === 0) c.sfx('win'); yield c.wait(0.45 + Math.random() * 0.5); }
+    for (let i = 0; i < 5; i++) { shoot(100 + i * 190, 80 + (i % 2) * 70); yield c.wait(0.12); }
+    yield c.wait(3.2);
+    yield c.fade(1, 1.6);
   },
 };
 

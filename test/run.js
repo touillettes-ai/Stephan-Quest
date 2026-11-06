@@ -270,7 +270,7 @@ console.log('Tactile');
   const cs = new G.CutScene(g, G.CUTS.casting, () => {}); cs.enter(); ok(cs.touchMode === 'cut', 'CutScene : mode cut attendu');
   const sel = new G.ChapterSelect(g); sel.enter(); ok(sel.touchMode === 'back', 'ChapterSelect : mode back attendu');
   // taps sur l'écran titre : « Choisir un chapitre » ouvre la sélection ; « Jouer » lance l'histoire
-  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 262 + 58 }; ti.update(1 / 60); Input.tap = null;
+  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 246 + 48 }; ti.update(1 / 60); Input.tap = null;
   ok(g.last instanceof G.ChapterSelect || g.last === undefined && ti.sel === 1, 'Titre : le tap sur « Choisir un chapitre » ne marche pas');
   g.last = null; const sel2 = new G.ChapterSelect(g); sel2.enter(); Input.tap = { x: 200, y: 100 + 52 * 3 + 10 }; sel2.update(1 / 60); Input.tap = null;
   ok(sel2.sel === 3, 'Sélection de chapitre : le tap sur une ligne ne la sélectionne pas');
@@ -283,7 +283,7 @@ console.log('Mini-jeux');
 {
   const g = { go(sc) { g.last = sc; }, ctx: mockCtx() };
   ok(G.MINIGAMES.length >= 1 && G.MINIGAMES.every(m => m.def && (!m.def.song || G.MUSIC[m.def.song])), 'MINIGAMES : musique introuvable');
-  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 254 + 100 }; ti.update(1 / 60); Input.tap = null;
+  const ti = new G.TitleScene(g); ti.enter(); Input.tap = { x: 480, y: 246 + 96 }; ti.update(1 / 60); Input.tap = null;
   ok(g.last instanceof G.MiniGameSelect, 'Titre : le bouton « Mini-jeux » n\'ouvre pas le menu');
   const mg = new G.MiniGameSelect(g); mg.enter(); g.last = null; Input.tap = { x: 300, y: 115 }; mg.update(1 / 60); Input.tap = null; ok(g.last instanceof G.DanceScene, 'Mini-jeux : le tap sur le mini-jeu sélectionné ne lance pas la danse');
   g.last.enter(); ok(g.last.touchMode === 'dancefree' && g.last.song.length > 200, 'Danse (mini-jeu) : chanson entière attendue');
@@ -299,9 +299,17 @@ console.log('Décors / personnages');
     for (const ch of Object.values(G.CHARS)) for (const st of ['idle', 'walk', 'jump', 'fall', 'wave', 'cheer', 'sit', 'hurt']) G.drawCharacter(ctx, ch, 100, 400, { state: st, t: 1.2, facing: -1, talking: true, emote: '!' });
     for (const k of G.ITEM_KINDS) G.drawItem(ctx, k, 50, 50, 1, 1, 2);
     for (const k of Object.keys(G.HAZARDS)) { G.drawHazard(ctx, k, 100, 400, 1, 1, false); G.drawHazard(ctx, k, 100, 400, 1, -1, true); }
-    for (const k of ['desk', 'chair', 'dchair', 'table', 'whiteboard', 'banner', 'cake', 'stool', 'counter', 'door', 'seat', 'maki', 'ecran', 'balai', 'tascarottes', 'scene', 'foule', 'longtable', 'panier', 'basket', 'vitrecassee', 'eclats', 'avion', 'gravier', 'teams', 'boule', 'cochonnet', 'escargot', 'haltere', 'bille', 'billes', 'twingo', 'parachute', 'wc', 'batte', 'coeur']) G.drawProp(ctx, { kind: k, x: 400, y: 480, pieces: 3, check: '#c00', candle: true }, 1);
+    for (const k of ['desk', 'chair', 'dchair', 'table', 'whiteboard', 'banner', 'cake', 'stool', 'counter', 'door', 'seat', 'maki', 'ecran', 'balai', 'tascarottes', 'scene', 'foule', 'longtable', 'panier', 'basket', 'vitrecassee', 'eclats', 'avion', 'gravier', 'teams', 'boule', 'cochonnet', 'escargot', 'haltere', 'bille', 'billes', 'twingo', 'parachute', 'wc', 'batte', 'coeur', 'sabre', 'larme', 'bras']) G.drawProp(ctx, { kind: k, x: 400, y: 480, pieces: 3, check: '#c00', candle: true }, 1);
     const ts = [new G.TitleScene(fakeGame), new G.MiniGameSelect(fakeGame), new G.ChapterSelect(fakeGame), new G.ChapterCard(fakeGame, G.STORY[0], () => {}), new G.CreditsScene(fakeGame)];
     for (const s of ts) { s.enter(); for (let i = 0; i < 30; i++) frame(s, 1 / 30, {}); s.draw(ctx); }
+    { // generique en mode histoire : les invites partent un par un, puis l'epilogue demarre
+      let next = null; const gm = { go(sc) { next = sc; }, ctx }; const cr = new G.CreditsScene(gm, true); cr.enter();
+      for (let i = 0; i < 30 * 80 && !next; i++) frame(cr, 1 / 30, {});
+      ok(next instanceof G.CutScene && next.def === G.CUTS.j0_epilogue, "generique : l'epilogue ne demarre pas apres le depart des invites");
+      ok(cr.cast.every(c => c.k === 'hero' || c.x < -70 || c.x > G.W + 70), 'generique : tous les invites ne sont pas partis');
+      let menu = null; const gm2 = { go(sc) { menu = sc; }, ctx }; const ti = new G.TitleScene(gm2); ti.enter(); ti.sel = 3; ti.go();
+      ok(menu instanceof G.CreditsScene && !menu.story, "menu : le bouton Credits n'ouvre pas le generique");
+    }
     console.log('  ✓ tous les dessins s\'exécutent sans erreur');
   } catch (e) { ok(false, 'dessins : ' + e.stack.split('\n').slice(0, 3).join(' | ')); }
 }

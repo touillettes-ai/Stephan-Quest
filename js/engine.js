@@ -75,7 +75,7 @@ class Game {
    ============================================================ */
 function runStep(game, ci, si) {
   const ch = STORY[ci];
-  if (!ch) { game.go(new CreditsScene(game)); return; }
+  if (!ch) { game.go(new CreditsScene(game, true)); return; }
   if (si === -1) { game.go(new ChapterCard(game, ch, () => runStep(game, ci, 0))); return; }
   const step = ch.steps[si];
   if (!step) { runStep(game, ci + 1, -1); return; }
@@ -125,7 +125,7 @@ class CutScene {
   enter() {
     this.t = 0; this.bg = this.def.bg || 'openspace'; this.theme = this.def.theme || this.bg; this.worldW = this.def.worldW || W;
     this.cam = 0; this.follow = null; this.actors = {}; this.props = []; this.dlg = null; this.caption = null; this.card = null;
-    this.bgw = []; this.black = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
+    this.bgw = []; this.black = 0; this.dim = 0; this.shake = 0; this.waiter = null; this.finished = false; this.error = null; this.parts = [];
     this.api = this.makeApi();
     this.gen = this.def.script(this.api);
     this.advance();
@@ -194,6 +194,7 @@ class CutScene {
       /* --- caméra & effets --- */
       cam(x, dur) { const x0 = S.cam; S.follow = null; return timer(dur || 1, p => { S.cam = lerp(x0, clamp(x, 0, Math.max(0, S.worldW - W)), p); }); },
       follow(k) { S.follow = k ? A(k) : null; },
+      dim(to, dur) { const f0 = S.dim; return timer(dur || 0.6, p => { S.dim = lerp(f0, to, p); }); },     // assombrit le décor (pas les dialogues)
       fade(to, dur) { const f0 = S.black; return timer(dur || 0.6, p => { S.black = lerp(f0, to, p); }); },
       shake(sec) { S.shake = sec; },
       sfx(n) { Sfx.play(n); },
@@ -237,6 +238,7 @@ class CutScene {
     drawParticles(ctx, this.parts);
     ctx.translate(cam, 0);
     ctx.restore();
+    if (this.dim > 0) { ctx.fillStyle = 'rgba(4,6,20,' + this.dim + ')'; ctx.fillRect(0, 0, W, H); }
     if (this.caption) { const c = this.caption; ctx.font = 'bold 22px ' + FONT; const w = ctx.measureText(c.text).width + 40; rr(ctx, W / 2 - w / 2, 22, w, 44, 12, 'rgba(14,18,34,.85)', '#8fa6ff', 2); txt(ctx, c.text, W / 2, 52, 22, '#fff', 'center'); }
     if (this.dlg) drawDialogue(ctx, this.dlg, this.t);
     if (this.black > 0) { ctx.fillStyle = 'rgba(0,0,0,' + this.black + ')'; ctx.fillRect(0, 0, W, H); }
@@ -765,11 +767,11 @@ class TitleScene {
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 4) burst(this.parts, rnd(60, 900), 0, 3, CONFETTI, 30);
-    if (Input.menuUp()) { this.sel = (this.sel + 2) % 3; Sfx.play('blip'); } else if (Input.menuDown()) { this.sel = (this.sel + 1) % 3; Sfx.play('blip'); }
-    if (Input.tap) for (let i = 0; i < 3; i++) { const y = 254 + i * 50; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
+    if (Input.menuUp()) { this.sel = (this.sel + 3) % 4; Sfx.play('blip'); } else if (Input.menuDown()) { this.sel = (this.sel + 1) % 4; Sfx.play('blip'); }
+    if (Input.tap) for (let i = 0; i < 4; i++) { const y = 246 + i * 48; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
     if (Input.confirm()) this.go();
   }
-  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else this.game.go(new MiniGameSelect(this.game)); }
+  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else if (this.sel === 2) this.game.go(new MiniGameSelect(this.game)); else this.game.go(new CreditsScene(this.game, false)); }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) { drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE); ctx.globalAlpha = 0.3; rect(ctx, x, y, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(x / TILE + y / TILE + Math.floor(this.t * 1.6)) % 4]); ctx.globalAlpha = 1; }
@@ -781,8 +783,8 @@ class TitleScene {
     const ry = ty0 + (tl.length - 1) * 64 + 24;
     rr(ctx, W / 2 - 270, ry, 540, 44, 10, '#d6402f', '#fff', 3); poly(ctx, [[W / 2 - 270, ry + 14], [W / 2 - 296, ry + 14], [W / 2 - 280, ry + 22], [W / 2 - 296, ry + 32], [W / 2 - 270, ry + 32]], '#a02a1e'); poly(ctx, [[W / 2 + 270, ry + 14], [W / 2 + 296, ry + 14], [W / 2 + 280, ry + 22], [W / 2 + 296, ry + 32], [W / 2 + 270, ry + 32]], '#a02a1e');
     txt(ctx, CONFIG.subtitle, W / 2, ry + 31, 24, '#fff', 'center');
-    ['Jouer', 'Choisir un chapitre', 'Mini-jeux'].forEach((s, i) => {
-      const y = 254 + i * 50, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
+    ['Jouer', 'Choisir un chapitre', 'Mini-jeux', 'Crédits'].forEach((s, i) => {
+      const y = 246 + i * 48, on = this.sel === i, pulse = on ? 4 * Math.sin(this.t * 6) : 0;
       if (on) { ctx.globalAlpha = 0.35; rr(ctx, W / 2 - 190, y - 32, 380, 50, 25, '#ffd23f'); ctx.globalAlpha = 1; }
       rr(ctx, W / 2 - 170, y - 28, 340, 44, 22, on ? '#ffd23f' : 'rgba(20,16,44,.88)', on ? '#fff' : 'rgba(255,255,255,.35)', 2.5);
       txt(ctx, s, W / 2, y + 2, 25, on ? '#2a1a3e' : '#fff', 'center');
@@ -1535,20 +1537,42 @@ class ChapterCard {
 }
 
 class CreditsScene {
-  constructor(game) { this.game = game; }
-  enter() { this.t = 0; this.parts = []; this.cast = ['coline', 'amelie', 'cecile', 'danila', 'hero', 'sheryna', 'bastien', 'olivier', 'arno', 'chef'].map((k, i) => ({ ch: CHARS[k], x: 90 + i * 86, t: i * 0.5 })); }
+  // story = true : lancé à la fin de l'histoire → après le défilé, les invités partent un par un puis l'épilogue (CUTS.j0_epilogue) ; false : depuis le menu
+  constructor(game, story) { this.game = game; this.story = !!story; }
+  enter() {
+    this.t = 0; this.parts = []; this.leave = -1; this.done = false; this.goneT = 0;
+    this.endT = (440 + CONFIG.credits.length * 40) / 38;
+    this.cast = ['coline', 'amelie', 'cecile', 'danila', 'hero', 'sheryna', 'bastien', 'olivier', 'arno', 'chef'].map((k, i) => ({ k, ch: CHARS[k], x: 90 + i * 86, t: i * 0.5, go: -1, dir: 1 }));
+  }
+  finish() {
+    this.done = true;
+    if (this.story) this.game.go(new CutScene(this.game, CUTS.j0_epilogue, () => this.game.go(new TitleScene(this.game))));
+  }
   update(dt) {
     this.t += dt; for (const c of this.cast) c.t += dt; updateParticles(this.parts, dt);
     if (Math.random() < dt * 8) rain(this.parts, 2, CONFETTI);
-    if (this.t > 2 && Input.confirm()) this.game.go(new TitleScene(this.game));
+    if (this.leave < 0 && this.t >= this.endT) this.leave = this.t;
+    if (this.t > 2 && Input.confirm()) {
+      if (!this.story) { this.game.go(new TitleScene(this.game)); return; }
+      if (this.leave < 0) { this.t = Math.max(this.t, this.endT); this.leave = this.t; } else if (!this.done) { this.finish(); return; }
+    }
+    if (this.leave >= 0) {
+      const others = this.cast.filter(c => c.k !== 'hero');
+      others.forEach((c, i) => {
+        if (c.go < 0 && this.t >= this.leave + 0.9 * i) { c.go = this.t; c.dir = c.x < 434 ? -1 : 1; }
+        if (c.go >= 0) c.x += c.dir * 230 * dt;
+      });
+      if (others.every(c => c.x < -70 || c.x > W + 70)) { this.goneT += dt; if (this.goneT > 1.2 && !this.done) this.finish(); }
+    }
   }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE);
-    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, FLOOR_Y, { facing: -1, state: 'cheer', t: c.t });
+    const alone = this.cast.every(c => c.k === 'hero' || (c.go >= 0 && (c.x < -70 || c.x > W + 70)));
+    for (const c of this.cast) drawCharacter(ctx, c.ch, c.x, FLOOR_Y, { facing: c.go >= 0 ? c.dir : -1, state: c.go >= 0 ? 'walk' : (c.k === 'hero' && alone ? 'idle' : 'cheer'), t: c.t });
     drawParticles(ctx, this.parts);
     ctx.fillStyle = 'rgba(8,6,20,.6)'; ctx.fillRect(0, 0, W, 360);
     CONFIG.credits.forEach((l, i) => { const y = 440 - this.t * 38 + i * 40; if (y > -40 && y < 350) txt(ctx, l, W / 2, y, l.startsWith('★') ? 34 : 22, l.startsWith('★') ? '#ffd23f' : '#fff', 'center'); });
-    if (this.t > 2 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, 'Entrée : retour au titre', W / 2, H - 14, 16, '#fff', 'center');
+    if (this.t > 2 && Math.floor(this.t * 2) % 2 === 0) txt(ctx, this.story ? 'Entrée : passer' : 'Entrée : retour au titre', W / 2, H - 14, 16, '#fff', 'center');
   }
 }

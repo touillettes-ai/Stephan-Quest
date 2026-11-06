@@ -659,6 +659,14 @@ function drawProp(ctx, p, t) {
       const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.fillStyle = '#ff4f7f'; ctx.strokeStyle = '#b3204f'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-14, -2, -8, -13, 0, -5); ctx.bezierCurveTo(8, -13, 14, -2, 0, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
       circ(ctx, -4, -4, 1.8, 'rgba(255,255,255,.8)'); ctx.restore(); break; }
+    case 'sabre': {                               // sabre laser (x,y = poignée), lame vers le haut, rotation p.rot, couleur p.c, longueur p.len
+      ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0); const c0 = p.c || '#3fd0ff', len = (p.len === undefined ? 74 : p.len);
+      if (len > 0) { for (const [w, a] of [[14, 0.16], [9, 0.3], [5, 1]]) { ctx.globalAlpha = a; ctx.strokeStyle = w === 5 ? '#ffffff' : c0; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, -len); ctx.stroke(); } ctx.globalAlpha = 1; }
+      rr(ctx, -2.5, -4, 5, 15, 1.5, '#9aa0aa', '#4a4f5a', 1); rect(ctx, -3, 2, 6, 2, '#2a2a2a'); ctx.restore(); break; }
+    case 'larme':                                 // larme (x,y), opacité p.a
+      ctx.globalAlpha = p.a === undefined ? 1 : p.a; ctx.fillStyle = '#7fc8ff'; ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.quadraticCurveTo(x + 5, y, x, y + 4); ctx.quadraticCurveTo(x - 5, y, x, y - 6); ctx.fill(); circ(ctx, x - 1.2, y, 1.1, 'rgba(255,255,255,.9)'); ctx.globalAlpha = 1; break;
+    case 'bras':                                  // bras tendu de (x,y) à (p.x2,p.y2), manche p.c, main p.skin
+      line(ctx, x, y, p.x2, p.y2, p.c || '#555', 7); circ(ctx, p.x2, p.y2, 4.6, p.skin || '#f0c8a0'); break;
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;
@@ -748,6 +756,7 @@ const THEMES = {
   circuit:   { floor: '#0a2a20', floorTop: '#c9a24a', plat: '#14543c', platTop: '#d9b64a', label: 'Carte mère' },
   pi:        { floor: '#2b2238', floorTop: '#5a4a6b', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle PI' },
   reunion:   { floor: '#3b2f45', floorTop: '#6a5580', plat: '#7a5a3a', platTop: '#b98f52', label: 'Salle de réunion' },
+  parking:   { floor: '#2e3138', floorTop: '#555b68', plat: '#4a4f5a', platTop: '#7a8190', label: 'Parking' },
   bar:       { floor: '#241638', floorTop: '#ff4fa3', plat: '#4b2a1a', platTop: '#ff9a3c', label: 'Le bar' },
 };
 function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
@@ -767,6 +776,7 @@ function drawTile(ctx, theme, kind, px, py, topExposed, tx, ty) {
     case 'train':     rect(ctx, px, py + 15, TILE, 2, 'rgba(0,0,0,.2)'); circ(ctx, px + 5, py + 5, 1.5, 'rgba(255,255,255,.25)'); circ(ctx, px + TILE - 5, py + 5, 1.5, 'rgba(255,255,255,.25)'); break;
     case 'japonais':  rect(ctx, px, py + TILE - 2, TILE, 2, '#6e5833'); rect(ctx, px + 15, py, 2, TILE, 'rgba(110,88,51,.4)'); break;
     case 'gastro':    rect(ctx, px, py + TILE - 1, TILE, 1, 'rgba(201,162,74,.35)'); rect(ctx, px + ((ty & 1) ? 8 : 20), py, 1, TILE, 'rgba(0,0,0,.35)'); break;
+    case 'parking':   if (tx % 5 === 0) rect(ctx, px + 14, py, 3, TILE, 'rgba(255,255,255,.5)'); break;
     case 'bar':       rect(ctx, px, py + TILE - 1, TILE, 1, 'rgba(255,79,163,.25)'); break;
     case 'circuit':   rect(ctx, px + 8 + ((tx & 1) ? 10 : 0), py, 2, TILE, 'rgba(212,175,55,.3)'); rect(ctx, px, py + 20, TILE, 2, 'rgba(212,175,55,.22)'); circ(ctx, px + 9 + ((tx & 1) ? 10 : 0), py + 21, 2.4, 'rgba(255,230,120,.4)'); break;
   }
@@ -920,6 +930,16 @@ BG.mozart = (ctx, cx, t) => {
   rect(ctx, 0, FLOOR_Y - 150, W, 6, 'rgba(0,0,0,.15)');
 };
 THEMES.mozart = THEMES.reunion;
+/* Parking de nuit (épilogue) : ciel étoilé, lune, immeubles, lampadaires */
+BG.parking = (ctx, cx, t) => {
+  vgrad(ctx, 0, H, '#070b24', '#2a3560');
+  for (let i = 0; i < 70; i++) { ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 1.5 + i)); rect(ctx, hash(i) * W, hash(i + 40) * 300, 2, 2, '#fff'); } ctx.globalAlpha = 1;
+  circ(ctx, 800, 90, 34, '#f4f1d4'); circ(ctx, 814, 84, 29, '#0f1636');
+  for (let i = 0; i < 9; i++) { const bx = i * 120 - 10, bh = 90 + hash(i * 3) * 120; rect(ctx, bx, FLOOR_Y - bh - 20, 104, bh + 20, '#141b3a'); for (let k = 0; k < 8; k++) if (hash(i * 11 + k) > 0.55) rect(ctx, bx + 10 + (k % 4) * 22, FLOOR_Y - bh - 8 + Math.floor(k / 4) * 30, 12, 16, '#ffe08a'); }
+  rect(ctx, 0, FLOOR_Y - 56, W, 56, '#1b2040'); rect(ctx, 0, FLOOR_Y - 60, W, 6, '#2c3358');
+  rr(ctx, 40, FLOOR_Y - 128, 52, 52, 8, '#2f7fd1', '#fff', 4); txt(ctx, 'P', 66, FLOOR_Y - 88, 40, '#fff', 'center');
+  for (const lx of [200, 520, 860]) { rect(ctx, lx - 3, FLOOR_Y - 220, 6, 220, '#30364f'); rect(ctx, lx - 3, FLOOR_Y - 224, 40, 6, '#30364f'); ctx.globalAlpha = 0.14; poly(ctx, [[lx + 24, FLOOR_Y - 216], [lx + 110, FLOOR_Y], [lx - 60, FLOOR_Y]], '#ffe9a8'); ctx.globalAlpha = 1; circ(ctx, lx + 34, FLOOR_Y - 214, 7, '#fff2b8'); }
+};
 /* Open space avec une fenêtre brisée (chapitre « Le logigramme » : clin d'œil à Bastien et Olivier qui ont traversé la vitre du train) */
 BG.openspaceBrisee = (ctx, cx, t) => {
   BG.openspace(ctx, cx, t);

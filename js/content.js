@@ -1407,6 +1407,95 @@ CUTS.j0_fin = {
   },
 };
 
+/* Épilogue (après le générique, quand tout le monde est parti) : Stephan seul, Bastien adoubé au sabre laser, parking et feu d'artifice.
+   Test visuel : test/shot.html#cut/j0_epilogue/6 */
+CUTS.j0_epilogue = {
+  type: 'cutscene', bg: 'bar',
+  script: function* (c) {
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const FIRE = ['#ff5a5a', '#ffd23f', '#5ad1ff', '#7dff7d', '#ff7ad9', '#ffffff'];
+    c.add('hero', CHARS.hero, 434, { face: -1 });
+    const hero = c.actors.hero;
+    yield c.wait(1.2);
+    yield c.say('hero', 'Ils me manquent déjà, mes petits loulous…', { mood: 'sad' });
+    // la lumière baisse, Stephan verse une larme
+    c.mood('hero', 'sad');
+    yield c.dim(0.55, 2.2);
+    const tear = c.prop('larme', 426, FLOOR_Y - 70, { a: 0, front: true });
+    yield tween(2.2, u => { tear.a = Math.min(1, u * 5) * (1 - Math.max(0, (u - 0.85) * 6.6)); tear.y = lerp(FLOOR_Y - 70, FLOOR_Y - 34, u * u); });
+    c.unprop(tear);
+    yield c.wait(0.6);
+    // Bastien arrive derrière lui et lui met la main dans le dos
+    c.add('bastien', CHARS.bastien, 1030, { face: -1, state: 'walk' });
+    yield c.walk('bastien', 474, 120);
+    c.face('bastien', -1);
+    const arm = c.prop('bras', 466, FLOOR_Y - 42, { x2: 446, y2: FLOOR_Y - 44, c: CHARS.bastien.top, skin: CHARS.bastien.skin, front: true });
+    let pat = true;
+    c.spawn((function* () { let u = 0; while (pat) { u += 1 / 60; arm.y2 = FLOOR_Y - 44 + Math.sin(u * 8) * 3; yield frame1(); } })());
+    yield c.say('bastien', 'Allez, ça va aller, Stephan… Suis-moi.');
+    c.face('hero', 1); c.mood('hero', undefined);
+    yield c.say('hero', 'Non… On a un truc à faire tous les deux avant.');
+    pat = false; c.unprop(arm); c.face('bastien', -1);
+    // le sabre laser : Stephan adoube Bastien
+    c.pose('hero', 'idle');
+    const sab = c.prop('sabre', 450, FLOOR_Y - 40, { rot: 0.15, len: 0, front: true });
+    c.sfx('spring'); yield tween(0.5, u => { sab.len = 74 * u; });
+    yield c.dim(0.4, 0.6);
+    yield c.say('hero', 'Padawan, tu n\'es plus Maître des incidents…');
+    yield tween(0.5, u => { sab.rot = lerp(0.15, 1.1, u); });
+    c.sfx('spring'); c.burst(500, FLOOR_Y - 80, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.45);
+    yield tween(0.3, u => { sab.rot = lerp(1.1, 1.5, u); });
+    c.sfx('spring'); c.burst(485, FLOOR_Y - 60, 12, ['#3fd0ff', '#ffffff'], 140); yield c.wait(0.4);
+    yield c.say('hero', '…tu es devenu Chevalier Jedi des incidents !');
+    c.sfx('win'); c.confetti(50); c.emote('bastien', '♥', 2.4);
+    yield tween(0.4, u => { sab.rot = lerp(1.5, 0.15, u); });
+    yield c.say('bastien', 'Merci Stephan ! Je serai digne de ce titre.', { mood: 'happy' });
+    c.sfx('spring'); yield tween(0.4, u => { sab.len = 74 * (1 - u); }); c.unprop(sab);
+    c.face('bastien', 1);
+    yield c.say('bastien', 'Maintenant, suis-moi !');
+    yield c.say('hero', 'Allons-y !');
+    yield [c.walk('bastien', 1100, 170), c.walk('hero', 1060, 170)];
+    c.remove('bastien'); c.remove('hero');
+    // ---- le parking, vide à part la voiture de Sandie ----
+    yield c.fade(1, 0.9);
+    yield c.dim(0, 0.01);
+    c.bg('parking'); c.prop('twingo', 760, FLOOR_Y - 6, { col: '#3aa65a', face: -1 });
+    yield c.fade(0, 1);
+    yield c.caption('Un parking. Vide… ou presque.', 2.4);
+    c.add('bastien', CHARS.bastien, -70, { face: 1, state: 'walk' }); c.add('hero', CHARS.hero, -150, { face: 1, state: 'walk' });
+    yield [c.walk('bastien', 450, 150), c.walk('hero', 380, 150)];
+    c.face('hero', 1); c.face('bastien', -1);
+    c.emote('hero', '?', 1.4);
+    yield c.say('hero', 'Un parking ? Mais… il n\'y a personne.');
+    yield c.say('bastien', 'Tu crois ?', { mood: 'laugh' });
+    // tout le monde surgit
+    const X = {}; for (const [k, x] of FETE_GUESTS) X[k] = x;
+    const ws = [];
+    for (const [k, x] of FETE_GUESTS) {
+      if (k === 'bastien') continue;
+      const tx = k === 'sandie' ? 690 : Math.min(900, Math.max(60, x)), l = tx < 480;
+      c.add(k, k === 'matthieu' ? CHARS.cowboy : CHARS[k], l ? -80 : 1040, { face: l ? 1 : -1, state: 'walk' });
+      ws.push(c.walk(k, tx, 260));
+    }
+    c.emote('hero', '!!', 2); c.sfx('win');
+    yield ws;
+    for (const k of Object.keys(c.actors)) { if (k !== 'hero') c.face(k, c.actors[k].x < 380 ? 1 : -1); c.pose(k, 'cheer'); }
+    c.face('hero', 1); c.confetti(60);
+    yield c.say('coline', 'Bonne continuation Stephan !', { name: 'Tout le monde', mood: 'laugh' });
+    // ---- feu d'artifice ----
+    const shoot = (x, y) => c.spawn((function* () {
+      for (let k = 0; k < 6; k++) { c.burst(x, lerp(FLOOR_Y - 70, y, k / 5), 3, ['#ffe08a'], 45); yield c.wait(0.06); }
+      c.sfx('pop'); c.burst(x, y, 90, FIRE, 680); c.burst(x, y, 30, ['#ffffff'], 300);
+    })());
+    c.sfx('spring');
+    for (let i = 0; i < 12; i++) { shoot(130 + Math.random() * 700, 70 + Math.random() * 150); if (i % 3 === 0) c.sfx('win'); yield c.wait(0.45 + Math.random() * 0.5); }
+    for (let i = 0; i < 5; i++) { shoot(100 + i * 190, 80 + (i % 2) * 70); yield c.wait(0.12); }
+    yield c.wait(3.2);
+    yield c.fade(1, 1.6);
+  },
+};
+
 /* Casting : tous les personnages alignés (hors histoire, pour vérifier les skins).
    Voir : test/shot.html#cut/casting/2 */
 CUTS.casting = {
