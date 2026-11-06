@@ -655,6 +655,10 @@ function drawProp(ctx, p, t) {
       ctx.save(); ctx.translate(x, y - r); ctx.rotate(p.ang || 0); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = Math.max(1, r / 6);
       ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0.3, 2.3); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 3.4, 5.6); ctx.stroke(); ctx.restore();
       circ(ctx, x - r * 0.35, y - r * 1.4, r * 0.2, 'rgba(255,255,255,.85)'); break; }
+    case 'coeur': {                               // petit coeur (x,y = centre), p.scale
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.fillStyle = '#ff4f7f'; ctx.strokeStyle = '#b3204f'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-14, -2, -8, -13, 0, -5); ctx.bezierCurveTo(8, -13, 14, -2, 0, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      circ(ctx, -4, -4, 1.8, 'rgba(255,255,255,.8)'); ctx.restore(); break; }
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;

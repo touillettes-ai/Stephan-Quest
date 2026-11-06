@@ -854,6 +854,10 @@ function drawProp(ctx, p, t) {
       ctx.save(); ctx.translate(x, y - r); ctx.rotate(p.ang || 0); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = Math.max(1, r / 6);
       ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0.3, 2.3); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.32, 3.4, 5.6); ctx.stroke(); ctx.restore();
       circ(ctx, x - r * 0.35, y - r * 1.4, r * 0.2, 'rgba(255,255,255,.85)'); break; }
+    case 'coeur': {                               // petit coeur (x,y = centre), p.scale
+      const sc = p.scale || 1; ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); ctx.fillStyle = '#ff4f7f'; ctx.strokeStyle = '#b3204f'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(0, 8); ctx.bezierCurveTo(-14, -2, -8, -13, 0, -5); ctx.bezierCurveTo(8, -13, 14, -2, 0, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      circ(ctx, -4, -4, 1.8, 'rgba(255,255,255,.8)'); ctx.restore(); break; }
     case 'batte':                                // batte de baseball (x,y = poignée), rotation p.rot
       ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot || 0);
       rr(ctx, -3, -26, 6, 30, 3, '#d9a65a', '#8a5a22', 1.2); rr(ctx, -5.5, -64, 11, 42, 5.5, '#d9a65a', '#8a5a22', 1.5); rect(ctx, -3.5, 1, 7, 4, '#5a3a14'); ctx.restore(); break;
@@ -4132,9 +4136,52 @@ CUTS.j0_fin = {
     yield c.say('chef', 'Quinze ans, quinze mille chaises… Stephan, merci pour tout.');
     c.pose('hero', 'wave');
     yield c.say('hero', 'C\'est moi qui vous remercie. Vous allez me manquer. Sauf les mails urgents.');
+    c.pose('hero', 'idle');
+    const frame1 = () => ({ n: 0, update() { return this.n++ >= 1; } });
+    const tween = (dur, fn) => ({ t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / dur); fn(u); return u >= 1; } });
+    const heart = (from, to, delay) => c.spawn((function* () {
+      yield c.wait(delay);
+      const a = c.actors[from], b = c.actors[to]; if (!a || !b) return;
+      const x0 = a.x, y0 = a.y - 90, h = c.prop('coeur', x0, y0, { scale: 1.5, front: true });
+      yield tween(1, u => { h.x = lerp(x0, b.x, u); h.y = lerp(y0, b.y - 90, u) - Math.sin(u * Math.PI) * 45; });
+      c.unprop(h); c.burst(b.x, b.y - 90, 6, ['#ff5a8a', '#ff9ac0', '#ffffff'], 130);
+    })());
+    // ---- Bastien et Olivier attrapent Stephan et le jettent en l'air ----
+    yield [c.walk('bastien', 335, 240), c.walk('olivier', 425, 240)];
+    c.face('bastien', 1); c.face('olivier', -1);
+    const hero = c.actors.hero;
+    c.pose('bastien', 'cheer'); c.pose('olivier', 'cheer');
+    for (let i = 0; i < 3; i++) {
+      c.emote('bastien', 'HOP !', 0.8); c.emote('olivier', 'HOP !', 0.8); c.sfx('jump'); c.pose('hero', 'cheer');
+      const H = 95 + i * 40;
+      yield tween(0.85, u => { hero.y = FLOOR_Y - Math.sin(u * Math.PI) * H; hero.rot = u * 6.2832 * (i === 2 ? 1 : 0); });
+      hero.y = FLOOR_Y; hero.rot = 0; c.sfx('stomp'); c.shake(0.12);
+      yield c.wait(0.25);
+    }
+    c.pose('bastien', 'idle'); c.pose('olivier', 'idle'); c.pose('hero', 'idle');
+    c.pose('bastien', 'cheer');
+    yield c.say('bastien', 'CÂLIN COLLECTIF !', { mood: 'laugh' });
+    // ---- tout le monde se regroupe autour de Stephan ----
+    const order = FETE_GUESTS.map(g => g[0]).filter(k => k !== 'bastien' && k !== 'olivier'), n = order.length;
+    const ws = order.map((k, i) => { const left = i < n / 2, r = left ? (n / 2 - i) : (i - n / 2 + 1); return c.walk(k, 380 + (left ? -1 : 1) * (28 + r * 20), 230); });
+    yield ws;
+    for (const k of order) c.face(k, c.actors[k].x < 380 ? 1 : -1);
+    for (const k of [...order, 'bastien', 'olivier', 'hero']) { c.pose(k, 'cheer'); c.emote(k, '♥', 2.4); }
+    c.sfx('win'); c.confetti(60);
+    yield c.wait(2.2);
+    // ---- le mot de la fin ----
+    c.pose('hero', 'wave');
+    yield c.say('hero', 'C\'était une super aventure ! Merci à tous !');
+    c.emote('hero', 'MWAH ♥', 2.2); c.sfx('pop');
+    const guests = [...order, 'bastien', 'olivier'];
+    guests.slice().sort(() => Math.random() - 0.5).slice(0, 10).forEach((k, i) => heart('hero', k, i * 0.18));
+    yield c.wait(2.6);
     c.pose('hero', 'cheer'); c.confetti(100); c.rain(120);
+    guests.forEach((k, i) => { heart(k, 'hero', i * 0.12); c.spawn((function* () { yield c.wait(i * 0.12); c.emote(k, 'MWAH', 1.2); })()); });
     yield c.say('coline', 'Bonne retraite Stephan !!!', { name: 'Tout le monde' });
-    yield c.wait(1);
+    yield c.wait(1.4);
+    yield c.say('sheryna', 'On est trop Mim\'s !', { mood: 'laugh' });
+    yield c.wait(0.8);
     yield c.fade(1, 1.2);
     yield c.card('FIN', 'Bonne retraite, ' + CONFIG.hero + ' !', 3.2);
   },
