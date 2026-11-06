@@ -308,7 +308,7 @@ console.log('Décors / personnages');
       ok(next instanceof G.CutScene && next.def === G.CUTS.j0_epilogue, "generique : l'epilogue ne demarre pas apres le depart des invites");
       ok(cr.cast.every(c => c.k === 'hero' || c.x < -70 || c.x > G.W + 70), 'generique : tous les invites ne sont pas partis');
       let menu = null; const gm2 = { go(sc) { menu = sc; }, ctx }; const ti = new G.TitleScene(gm2); ti.enter(); ti.sel = 3; ti.go();
-      ok(menu instanceof G.CreditsScene && !menu.story, "menu : le bouton Credits n'ouvre pas le generique");
+      ok(menu instanceof G.CreditsScene && menu.story, "menu : le bouton Credits n'ouvre pas le generique");
     }
     console.log('  ✓ tous les dessins s\'exécutent sans erreur');
   } catch (e) { ok(false, 'dessins : ' + e.stack.split('\n').slice(0, 3).join(' | ')); }

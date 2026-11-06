@@ -771,7 +771,7 @@ class TitleScene {
     if (Input.tap) for (let i = 0; i < 4; i++) { const y = 246 + i * 48; if (Math.abs(Input.tap.x - W / 2) < 180 && Input.tap.y > y - 32 && Input.tap.y < y + 18) { this.sel = i; this.go(); return; } }
     if (Input.confirm()) this.go();
   }
-  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else if (this.sel === 2) this.game.go(new MiniGameSelect(this.game)); else this.game.go(new CreditsScene(this.game, false)); }
+  go() { Sfx.play('door'); if (this.sel === 0) runStep(this.game, 0, -1); else if (this.sel === 1) this.game.go(new ChapterSelect(this.game)); else if (this.sel === 2) this.game.go(new MiniGameSelect(this.game)); else this.game.go(new CreditsScene(this.game, true)); }
   draw(ctx) {
     drawBackground(ctx, 'bar', this.t * 30, 0, this.t);
     for (let x = 0; x < W; x += TILE) for (let y = FLOOR_Y; y < H; y += TILE) { drawTile(ctx, 'bar', '#', x, y, y === FLOOR_Y, x / TILE, y / TILE); ctx.globalAlpha = 0.3; rect(ctx, x, y, TILE, TILE, ['#ff4fa3', '#4fd8ff', '#ffe08a', '#7dff7d'][(x / TILE + y / TILE + Math.floor(this.t * 1.6)) % 4]); ctx.globalAlpha = 1; }
