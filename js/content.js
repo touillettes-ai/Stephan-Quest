@@ -577,6 +577,8 @@ CUTS.j9_japonais = {
     yield c.say('danila', 'Un menu B4 et une paire de brochettes Bœuf Fromage.');
     yield c.say('amelie', 'Un menu C4 et deux paires de brochettes Poulet.');
     yield c.say('sheryna', "Je vais vous prendre le Menu Trop Mims avec un maki Saumon, un Figatellu et le jouet, s'il vous plaît.");
+    // Bastien avait oublié Stephan…
+    yield c.say('hero', "Moi, je prends le Menu Deve 4, comme d'hab.");
     // Sandie doit filer : debout, roue, puis saut périlleux
     yield c.say('sandie', "Changement de programme : j'ai des ECAB à valider, je dois vous laisser en urgence !", { mood: 'surprised' });
     const sa = c.actors.sandie; sa.z = 3; c.pose('sandie', 'idle'); c.face('sandie', -1); c.sfx('jump');
@@ -587,13 +589,13 @@ CUTS.j9_japonais = {
     yield c.say('hero', 'Wahou, elle est balèze la Didie !', { mood: 'surprised' });
     yield c.say('bastien', "C'est tout bon, merci.");
     // Olivier arrive avec la pinte de Danila
-    const pinte = c.prop('biere', 1020, FLOOR_Y - 38, { lift: 0, scale: 1.3, front: true });
+    const pinte = c.prop('biere', 1020, FLOOR_Y - 38, { lift: 0, scale: 1.15, front: true });
     c.add('olivier', SERV('olivier'), 1020, { face: -1, state: 'walk' });
     yield walkCarry('olivier', 655, 150, pinte);
     c.face('olivier', -1);
     yield c.say('olivier', "Danila, tu as oublié de commander tes pintes ! Mais je te la ramène direct.");
     c.pose('olivier', 'wave'); c.sfx('blip');
-    yield lob(pinte, 560, FLOOR_Y - 52, 0.7, 40);
+    yield lob(pinte, 549, FLOOR_Y - 30, 0.7, 40);          // la pinte atterrit dans la main de Danila (assise), pas sur sa tête
     c.pose('olivier', 'idle'); c.pose('danila', 'cheer'); c.sfx('coin');
     yield c.wait(0.8);
     c.pose('danila', 'sit');
