@@ -3302,9 +3302,10 @@ CUTS.j14_bureau = {
     c.emote('bastien', '!', 1);
     yield all([travel('bastien', 700, FLOOR_Y, 230), travel('olivier', 780, FLOOR_Y, 130)]);
     c.actors.bastien.z = 0; c.actors.olivier.z = 0; c.face('bastien', -1); c.face('olivier', -1);
+    c.face('hero', -1); yield c.wait(0.3);                                   // il se tourne d'abord vers Coline (la cheffe)
     c.pose('hero', 'wave');
     yield c.say('hero', 'Bonjour tout le monde ! Ma valise et moi sommes enfin arrivés.');
-    c.pose('hero', 'idle');
+    c.pose('hero', 'idle'); c.face('hero', 1);                               // puis se retourne vers le côté opposé
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 540, 110);
     c.face('hero', 1);
