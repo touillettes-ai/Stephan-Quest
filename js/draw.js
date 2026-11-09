@@ -975,11 +975,31 @@ BG.openspaceBrisee = (ctx, cx, t) => {
   });
 };
 THEMES.openspaceBrisee = THEMES.openspace;
+/* Train : TRAIN.speed (1 = vitesse de croisière, 0 = à l'arrêt) fait défiler le paysage ; TRAIN.st (0..1) fait glisser le quai de la gare dans les vitres.
+   Réglé par la cinématique j15_train_bastien (réinitialisé par runStep). */
+const TRAIN = { speed: 1, st: 0, pos: 0, last: null };
+function trainStation(ctx, x, y, w, h, st, t) {
+  const dx = (1 - st) * (w + 10);
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.translate(dx, 0);
+  vgrad(ctx, y, y + h, '#9fc3e6', '#e4eef7');                                   // fond : ciel (le dégradé est calé sur la fenêtre)
+  rect(ctx, x, y + 70, w, 90, '#8b94a1'); for (let i = 0; i < 4; i++) { rr(ctx, x + 14 + i * 68, y + 84, 44, 40, 3, '#cfe3f3', '#5a6472', 2); }   // bâtiment de gare
+  rect(ctx, x, y, w, 22, '#5a6472'); rect(ctx, x, y + 22, w, 5, '#3f4752');         // auvent du quai
+  for (const px of [x + 26, x + w - 34]) rect(ctx, px, y + 22, 8, h - 56, '#5a6472');
+  rr(ctx, x + w / 2 - 62, y + 46, 124, 34, 5, '#2f7fd1', '#ffffff', 2.5); txt(ctx, 'GTAR', x + w / 2, y + 71, 22, '#ffffff', 'center', 'bold');
+  rect(ctx, x, y + h - 36, w, 36, '#aab3be'); rect(ctx, x, y + h - 36, w, 4, '#c9d0da'); rect(ctx, x, y + h - 30, w, 3, '#f2c230');        // quai + ligne jaune
+  [[x + 78, '#c0392b'], [x + 128, '#3d6fa8'], [x + 196, '#3a8f6a']].forEach(([px, col], i) => {                  // voyageurs qui attendent
+    const bob = Math.sin(t * 2 + i) * 1.2; ell(ctx, px, y + h - 38, 9, 3, 'rgba(0,0,0,.18)'); rr(ctx, px - 7, y + h - 74 + bob, 14, 32, 6, col); circ(ctx, px, y + h - 80 + bob, 7, '#f0c8a0');
+    if (st >= 0.98 && i !== 1) line(ctx, px + 6, y + h - 66 + bob, px + 12, y + h - 82 + bob + Math.sin(t * 8 + i) * 4, col, 3);
+  });
+  ctx.restore();
+}
 BG.train = (ctx, cx, t) => {
   vgrad(ctx, 0, H, '#dfe3e9', '#c3cad4');
-  const sc = t * 150 + cx * 0.3;
+  let dtt = TRAIN.last === null ? 0 : t - TRAIN.last; if (dtt < 0 || dtt > 0.2) dtt = 0.016; TRAIN.last = t; TRAIN.pos += dtt * 150 * TRAIN.speed;
+  const sc = TRAIN.pos + cx * 0.3;
   par(cx, 0.9, 340, (x) => {
     landscape(ctx, x + 30, 60, 280, 200, sc);
+    if (TRAIN.st > 0) trainStation(ctx, x + 30, 60, 280, 200, TRAIN.st, t);
     ctx.strokeStyle = '#f2f4f7'; ctx.lineWidth = 10; ctx.strokeRect(x + 30, 60, 280, 200);
     rect(ctx, x + 168, 60, 6, 200, '#f2f4f7');
   });

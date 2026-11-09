@@ -13,7 +13,7 @@ const CONFIG = {
   credits: [                                    // ✏️ (une ligne commençant par ★ s'affiche en gros)
     '★ BONNE RETRAITE ★', '', 'Un jeu offert avec plein d\'amour', 'par toute l\'équipe', '',
     'Avec :', 'Stephan dans son propre rôle', 'Coline, Amélie, Sheryna, Youssef, Imen', 'Cécile, Franck, Danila, Hakim, Matthieu',
-    'Arno, Justine, Sandie, Bastien, Olivier', 'Lionel, Vincent, Damien et le Chef', '',
+    'Arno, Justine, Sandie, Bastien, Olivier', 'le Chef', '',
     'Aucune chaise de bureau n\'a été blessée', 'pendant le tournage.', '', '★ MERCI POUR TOUT ★',
   ],
 
@@ -92,7 +92,7 @@ LEVELS.logigramme = {
   type: 'level', bg: 'openspaceBrisee', theme: 'openspace',          // une fenêtre brisée : clin d'œil à la scène du train
   title: 'Le logigramme',
   objective: 'Récupère tous les morceaux du logigramme (il est immense !) et file au bureau du Chef !',
-  exitLabel: 'BUREAU DU CHEF',
+  exitLabel: 'CHEF',
   items: ['logi'], hazards: ['chair', 'mail'],
   map: buildMap(110, m => {
     m.ground(0, 109); m.pit(36, 38); m.pit(70, 72);
@@ -110,7 +110,7 @@ LEVELS.logigramme = {
 
 LEVELS.train = {
   type: 'level', theme: 'train', title: 'En route vers le GTAR',
-  objective: 'Ta valise s\'est ouverte : récupère slips, tee-shirts et pantalons avant d\'arriver au GTAR !',
+  objective: 'Ta valise s\'est ouverte : récupère tes slips, tee-shirts et pantalons avant d\'arriver à Paris !',
   exitLabel: 'GTAR',
   items: ['slip', 'tshirt', 'pantalon'], hazards: ['valise', 'mail'],
   map: buildMap(100, m => {
@@ -129,7 +129,7 @@ LEVELS.train = {
 
 LEVELS.crise = {
   type: 'level', theme: 'crise', title: 'La crise cyber',
-  objective: 'La cyber, la mallette (et ses papiers), Bastien… puis salle Mozart !',
+  objective: 'Mobilise la cyber, trouve la mallette de crise et les documents, retrouve Bastien puis rendez vous en salle Mozart pour gérer la crise!',
   exitLabel: 'SALLE MOZART',
   items: ['papier', 'malette', 'npc:lionel', 'npc:vincent', 'npc:damien', 'bureau'], hazards: ['chair', 'virus'],
   talks: {
@@ -179,7 +179,7 @@ LEVELS.pi = {
 
 LEVELS.backlog = {
   type: 'level', theme: 'circuit', title: 'Le backlog',
-  objective: 'Avec Bastien, rassemble les tickets mal rangés du backlog !',
+  objective: 'Avec ton padawan, range les tickets du backlog !',
   exitLabel: 'DONE',
   items: ['ticketbl'], hazards: ['bug', 'virus'], follower: 'bastien',
   map: buildMap(120, m => {
@@ -198,8 +198,8 @@ LEVELS.backlog = {
 
 LEVELS.japonais = {
   type: 'level', theme: 'japonais', title: 'Les commandes du déjeuner',
-  objective: 'Attrape makis, sushis et brochettes pour compléter le menu de chacun !',
-  exitLabel: 'NOTRE TABLE',
+  objective: 'Complète le menu de chacun !',
+  exitLabel: 'TABLE 12',
   items: ['maki', 'sushi', 'brochette'], hazards: ['waiter'],
   map: buildMap(100, m => {
     m.ground(0, 99);
@@ -218,7 +218,7 @@ LEVELS.japonais = {
 
 LEVELS.charlies = {
   type: 'level', theme: 'charlies', title: 'L\'entrecôte du départ',
-  objective: 'Récupère les entrecôtes et les frites pour la table du dernier jour !',
+  objective: 'Récupère les entrecôtes et les frites pour nourrir tes collègues !',
   exitLabel: 'TABLE 12',
   items: ['entrecote', 'frites'], hazards: ['waiter'],
   map: buildMap(92, m => {
@@ -237,7 +237,7 @@ LEVELS.charlies = {
 
 LEVELS.fete = {
   type: 'level', theme: 'bar', title: 'La fête de départ',
-  objective: 'Pintes, tapas, cadeaux… et rattrape Matthieu sur son cheval !',
+  objective: 'retrouve Pintes, prépare des tapas, trouve tes cadeaux… et rattrape Matthieu sur sa Licorne !',
   exitLabel: 'LA FÊTE',
   items: ['biere', 'tapas', 'cadeau', 'npc:cowboy'], hazards: ['waiter', 'mail'],
   chase: { key: 'cowboy', k: 4, mount: 'cheval', trigger: 300, path: [[88, 12], [93, 9], [99, 12], [105, 9], [111, 12], [117, 9], [121, 12]] },
@@ -319,7 +319,7 @@ const CUTS = {};
 CUTS.j15_train = {
   type: 'cutscene', bg: 'train',
   script: function* (c) {
-    yield c.caption('Lundi matin. Dans le train, direction le GTAR.', 2.6);
+    yield c.caption('Lundi matin. Dans le train, direction Paris.', 2.6);
     c.prop('seat', 440, FLOOR_Y);
     c.add('hero', CHARS.hero, 446, { state: 'sit', z: 1 });
     yield c.say('hero', 'Un train à l\'heure, un siège à la fenêtre… Quinze jours avant la retraite, la vie est belle.');
@@ -327,9 +327,9 @@ CUTS.j15_train = {
     c.prop('slip', 560, 300, { scale: 1.8 }); c.prop('tshirt', 640, 340, { scale: 1.8 }); c.prop('pantalon', 720, 290, { scale: 1.8 });
     yield c.wait(0.9);
     c.emote('hero', '!', 1.6); c.pose('hero', 'hurt');
-    yield c.say('hero', 'Ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !', { mood: 'surprised' });
+    yield c.say('hero', 'B**d*l ma valise ! Elle s\'est ouverte : mes slips, mes tee-shirts, mes pantalons… tout s\'envole dans le wagon !', { mood: 'surprised' });
     c.pose('hero', 'idle');
-    yield c.say(null, 'Mission : récupérer toute la garde-robe avant d\'arriver au GTAR.');
+    yield c.say(null, 'Mission : récupérer toute la garde-robe avant d\'arriver a Paris.');
   },
 };
 
@@ -342,7 +342,7 @@ CUTS.j15_train_bastien = {
     c.add('bastien', CHARS.bastien, 538, { face: -1, state: 'idle' });
     c.prop('seat', 560, FLOOR_Y, { front: true });                      // le siège cache la moitié de Bastien
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
-    yield c.caption('Un peu plus loin dans le wagon…', 2.2);
+    yield c.caption('Un peu plus loin juste avant le wagon Bar(re)…', 2.2);
     yield c.walk('hero', 300, 120);
     c.face('hero', 1); c.emote('hero', '?', 1.2);
     yield c.wait(0.9);
@@ -350,7 +350,7 @@ CUTS.j15_train_bastien = {
     c.mood('hero', 'angry');
     yield c.say('hero', "Qu'est-ce que tu fous là, Padawan ! Tu vas être en retard pour le Daily, bordel !", { mood: 'angry' });
     c.emote('bastien', 'Chut', 2.4);
-    yield c.say('bastien', 'Chuuuut ! Je fais un cache-cache avec Olivier.');
+    yield c.say('bastien', 'ChuUuUuUut ! Je fais un cache-cache avec Olivier.');
     c.mood('hero', undefined);
     for (const d of [-1, 1, -1, 1, 1]) { c.face('hero', d); c.emote('hero', '?', 0.6); yield c.wait(0.6); }      // Stephan cherche Olivier partout
     c.face('hero', 1);
@@ -366,7 +366,7 @@ CUTS.j15_train_bastien = {
     c.actors.olivier.rot = 0; c.actors.olivier.state = 'idle'; c.sfx('stomp'); c.burst(410, FLOOR_Y, 10, ['#e8e2d4'], 160);
     yield c.wait(0.5);
     c.face('olivier', -1); c.face('hero', 1);
-    yield c.say('olivier', 'Salut Papi.', { mood: 'laugh' });
+    yield c.say('olivier', 'Salut Papi ! ', { mood: 'laugh' });
     c.mood('hero', undefined);
     // Olivier rejoint Bastien et l'attrape
     yield c.walk('olivier', 492, 200);
@@ -376,7 +376,7 @@ CUTS.j15_train_bastien = {
     c.pose('olivier', 'idle'); c.emote('bastien', '!!', 1.4); c.mood('bastien', 'surprised');
     yield c.walk('bastien', 524, 60);
     c.face('bastien', 1);
-    yield c.say('olivier', 'Je vais te livrer au Delivery !', { mood: 'angry' });
+    yield c.say('olivier', 'Je vais te livrer au Delivery toi tu vas voir !', { mood: 'angry' });
     // ils s'envolent tous les deux
     c.pose('olivier', 'jump'); c.pose('bastien', 'jump'); c.mood('bastien', 'laugh'); c.mood('olivier', 'laugh');
     yield c.say('olivier', "VERS L'INFINI ET AU DELIVERY !", { name: 'Olivier et Bastien', mood: 'laugh' });
@@ -388,19 +388,18 @@ CUTS.j15_train_bastien = {
     c.pose('hero', 'idle'); c.face('hero', 1); c.emote('hero', '…', 1.6);
     yield c.wait(1.6);
     yield c.say('hero', 'Quinze jours avant la retraite… Ils vont me manquer, ces cons.', { mood: 'sad' });
-  },
-};
-
-CUTS.j15_train_outro = {
-  type: 'cutscene', bg: 'train',
-  script: function* (c) {
-    c.prop('seat', 440, FLOOR_Y);
-    c.add('hero', CHARS.hero, 446, { state: 'sit', z: 1 });
-    c.prop('slip', 520, FLOOR_Y - 20, { scale: 1.4 }); c.prop('tshirt', 560, FLOOR_Y - 20, { scale: 1.4 }); c.prop('pantalon', 600, FLOOR_Y - 20, { scale: 1.4 });
-    yield c.say('hero', 'Tout est rangé. Je ne fermerai plus jamais une valise sans sangle.');
-    c.pose('hero', 'cheer'); c.sfx('win');
-    yield c.say('hero', 'Direction le bureau, et sans caleçon manquant !');
-    c.pose('hero', 'idle');
+    // ---- le train ralentit et entre en gare ----
+    c.mood('hero', undefined);
+    const hero = c.actors.hero;
+    yield c.wait(0.6);
+    c.sfx('blip'); c.caption('Le train ralentit… Prochain arrêt : GTAR.', 3.2);
+    c.sfx('spring');
+    yield { t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / 6); TRAIN.speed = 1 - ease(u); TRAIN.st = ease(Math.max(0, (u - 0.3) / 0.7)); hero.rot = Math.sin(Math.min(1, u * 1.25) * Math.PI) * 0.09; return u >= 1; } };
+    hero.rot = 0; TRAIN.speed = 0; TRAIN.st = 1; c.sfx('stomp'); c.shake(0.35);
+    yield c.wait(0.8);
+    c.sfx('door'); c.sfx('blip');
+    yield c.caption('GTAR. Terminus, tout le monde descend !', 2.6);
+    yield c.fade(1, 0.8);
   },
 };
 
@@ -1623,7 +1622,7 @@ CUTS.casting = {
    HISTOIRE : l'ordre des chapitres, cinématiques et niveaux
    ============================================================ */
 const STORY = [
-  { day: 'J-15', title: 'En route vers le GTAR', steps: [CUTS.j15_train, LEVELS.train, CUTS.j15_train_bastien, CUTS.j15_train_outro] },
+  { day: 'J-15', title: 'En route vers le GTAR', steps: [CUTS.j15_train, LEVELS.train, CUTS.j15_train_bastien] },
   { day: 'J-14', title: 'Le logigramme',        steps: [CUTS.j14_bureau, LEVELS.logigramme, CUTS.j15_outro] },
   { day: 'J-9',  title: 'Déjeuner japonais',  steps: [CUTS.j9_choix, CUTS.j9_japonais, LEVELS.japonais, CUTS.j9_outro] },
   { day: 'J-7',  title: 'La crise',              steps: [CUTS.j7_crise, LEVELS.crise, CUTS.j7_mozart] },

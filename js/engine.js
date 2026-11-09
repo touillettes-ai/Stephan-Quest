@@ -74,6 +74,7 @@ class Game {
    Enchaînement de l'histoire (chapitres → cinématiques / niveaux)
    ============================================================ */
 function runStep(game, ci, si) {
+  TRAIN.speed = 1; TRAIN.st = 0;                // le train repart à pleine vitesse à chaque nouvelle étape
   const ch = STORY[ci];
   if (!ch) { game.go(new CreditsScene(game, true)); return; }
   if (si === -1) { game.go(new ChapterCard(game, ch, () => runStep(game, ci, 0))); return; }
