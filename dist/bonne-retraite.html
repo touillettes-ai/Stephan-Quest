@@ -3273,8 +3273,8 @@ CUTS.j14_bureau = {
     // Bastien et Olivier, chacun à un bout de la pièce (au fond), se lancent des avions en papier
     const BY = FLOOR_Y - 24, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 16, y: c.actors[k].y - 52 });
     c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
-    c.emote('bastien', ':D', 1.4);
     c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
+    c.emote('bastien', ':D', 1.4); c.emote('olivier', ':D', 1.4);          // (c.emote doit venir APRÈS c.add)
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
     const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
     const run = g => { let w = null; return { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = r.value; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; };
@@ -3294,6 +3294,7 @@ CUTS.j14_bureau = {
     c.add('arno', CHARS.arno, 1040, { face: -1 });
     yield all([flight(p3, 865, 300, 2.2, 55, 1.6), hopTo('arno', 640, 1.6, 3, 40)]);
     c.pose('bastien', 'idle');
+    c.mood('bastien', 'angry')
     p3.x = c.actors.arno.x - 15; p3.y = c.actors.arno.y - 54; p3.dir = -1; p3.rot = 0.3; c.emote('arno', '!', 1.2);
     yield c.say('arno', "Je l'ai !", { mood: 'laugh' });
     yield all([hopTo('arno', 1130, 1.8, 4, 36, p3)]);
@@ -3302,14 +3303,15 @@ CUTS.j14_bureau = {
     c.emote('bastien', '!', 1);
     yield all([travel('bastien', 700, FLOOR_Y, 230), travel('olivier', 780, FLOOR_Y, 130)]);
     c.actors.bastien.z = 0; c.actors.olivier.z = 0; c.face('bastien', -1); c.face('olivier', -1);
-    c.face('hero', -1); yield c.wait(0.3);                                   // il se tourne d'abord vers Coline (la cheffe)
     c.pose('hero', 'wave');
-    yield c.say('hero', 'Bonjour tout le monde ! Ma valise et moi sommes enfin arrivés.');
+    yield c.say('hero', 'Bien le bonjour Tout le monde');
+    c.face('hero', -1); yield c.wait(0.3);                                   // il se tourne vers Coline (la cheffe) avant de la saluer
+    yield c.say('hero', 'Bonjour cheffe');
     c.pose('hero', 'idle'); c.face('hero', 1);                               // puis se retourne vers le côté opposé
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
     yield c.walk('chef', 540, 110);
     c.face('hero', 1);
-    yield c.say('chef', 'Stephan. Avant de partir, j\'ai besoin du logigramme de la procédure de la procédure de crise. Complet.');
+    yield c.say('chef', 'Stephan. Avant ton départ, j\'ai besoin du logigramme de la procédure de la procédure de crise. Au Complet cette fois...');
     yield c.say('hero', 'Complet ? Il est tellement grand qu\'il est en morceaux dans tout l\'open space…');
     yield c.say('chef', 'Alors il y a beaucoup de morceaux à retrouver. Bonne chance.');
     c.face('hero', -1);
