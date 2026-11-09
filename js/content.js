@@ -411,6 +411,7 @@ CUTS.j14_bureau = {
     // Bastien et Olivier, chacun à un bout de la pièce (au fond), se lancent des avions en papier
     const BY = FLOOR_Y - 24, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 16, y: c.actors[k].y - 52 });
     c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
+    c.emote('bastien', ':D', 1.4);
     c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
     const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });

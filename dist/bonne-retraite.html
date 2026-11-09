@@ -1180,7 +1180,7 @@ const TRAIN = { speed: 1, st: 0, pos: 0, last: null };
 function trainStation(ctx, x, y, w, h, st, t) {
   const dx = (1 - st) * (w + 10);
   ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.translate(dx, 0);
-  vgrad(ctx, y, y + h, '#9fc3e6', '#e4eef7');                                   // fond : ciel (le dégradé est calé sur la fenêtre)
+  const sg = ctx.createLinearGradient(0, y, 0, y + h); sg.addColorStop(0, '#9fc3e6'); sg.addColorStop(1, '#e4eef7'); ctx.fillStyle = sg; ctx.fillRect(x, y, w, h);   // ciel de la gare (limité à la fenêtre : il glisse avec le quai)
   rect(ctx, x, y + 70, w, 90, '#8b94a1'); for (let i = 0; i < 4; i++) { rr(ctx, x + 14 + i * 68, y + 84, 44, 40, 3, '#cfe3f3', '#5a6472', 2); }   // bâtiment de gare
   rect(ctx, x, y, w, 22, '#5a6472'); rect(ctx, x, y + 22, w, 5, '#3f4752');         // auvent du quai
   for (const px of [x + 26, x + w - 34]) rect(ctx, px, y + 22, 8, h - 56, '#5a6472');
@@ -3273,6 +3273,7 @@ CUTS.j14_bureau = {
     // Bastien et Olivier, chacun à un bout de la pièce (au fond), se lancent des avions en papier
     const BY = FLOOR_Y - 24, hand = k => ({ x: c.actors[k].x + c.actors[k].facing * 16, y: c.actors[k].y - 52 });
     c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
+    c.emote('bastien', ':D', 1.4);
     c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
     const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });

@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{position:fixed;left:0;top:0}</style></head>
+<body><canvas id="c" width="960" height="544"></canvas>
+<script src="../js/util.js"></script><script src="../js/music.js"></script><script src="../js/draw.js"></script>
+<script>
+// Test : fond du train pendant l'arrivée en gare  → #0.4 (progression 0..1 du quai)
+const ctx = document.getElementById('c').getContext('2d'); TRAIN.st = +location.hash.slice(1) || 0.5; TRAIN.speed = 0.4;
+drawBackground(ctx, 'train', 0, 0, 3);
+</script></body></html>
