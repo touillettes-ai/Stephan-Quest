@@ -413,6 +413,8 @@ CUTS.j14_bureau = {
     c.add('bastien', CHARS.bastien, 80, { y: BY, face: 1, z: -1 });
     c.add('olivier', CHARS.olivier, 880, { y: BY, face: -1, z: -1 });
     c.emote('bastien', ':D', 1.4); c.emote('olivier', ':D', 1.4);          // (c.emote doit venir APRÈS c.add)
+    c.mood('coline', 'sad');
+    c.emote('coline', '😥', 3);
     c.add('hero', CHARS.hero, -60, { state: 'walk' });
     const all = ws => ({ update(dt) { ws = ws.filter(w => !w.update(dt)); return ws.length === 0; } });
     const run = g => { let w = null; return { update(dt) { for (let n = 0; n < 50; n++) { if (!w) { const r = g.next(); if (r.done) return true; w = r.value; } if (!w.update(dt)) return false; w = null; dt = 0; } return false; } }; };
@@ -432,26 +434,48 @@ CUTS.j14_bureau = {
     c.add('arno', CHARS.arno, 1040, { face: -1 });
     yield all([flight(p3, 865, 300, 2.2, 55, 1.6), hopTo('arno', 640, 1.6, 3, 40)]);
     c.pose('bastien', 'idle');
-    c.mood('bastien', 'angry')
     p3.x = c.actors.arno.x - 15; p3.y = c.actors.arno.y - 54; p3.dir = -1; p3.rot = 0.3; c.emote('arno', '!', 1.2);
+    c.mood('bastien', 'surprised');
+    c.mood('olivier', 'surprised');
+    c.mood('coline', 'surprised');
     yield c.say('arno', "Je l'ai !", { mood: 'laugh' });
+    c.mood('bastien', 'angry');
+    c.mood('olivier', 'angry');
+    c.mood('coline', 'happy');
     yield all([hopTo('arno', 1130, 1.8, 4, 36, p3)]);
     c.remove('arno'); c.unprop(p3);
     // Bastien rejoint Olivier
-    c.emote('bastien', '!', 1);
+    c.emote('coline', '😃', 1.2);
+    c.emote('bastien', '😔', 1.2);
+    c.emote('olivier', '😔', 1.2);
     yield all([travel('bastien', 700, FLOOR_Y, 230), travel('olivier', 780, FLOOR_Y, 130)]);
     c.actors.bastien.z = 0; c.actors.olivier.z = 0; c.face('bastien', -1); c.face('olivier', -1);
     c.pose('hero', 'wave');
+    c.mood('bastien', undefined);
+    c.mood('olivier', undefined);
     yield c.say('hero', 'Bien le bonjour Tout le monde');
+    yield c.say('olivier', "Coucou Papi !", { name: 'Olivier', mood: 'laugh' });
+    yield c.say('bastien', "Coucou mon Steph  !", { name: 'Bastien', mood: 'laugh' });
+    c.pose('olivier', 'idle');
+    c.pose('bastien', 'idle');
+    c.mood('bastien', undefined);
+    c.mood('olivier', undefined);
+    c.pose('olivier', 'wave');
+    c.pose('bastien', 'wave');
     c.face('hero', -1); yield c.wait(0.3);                                   // il se tourne vers Coline (la cheffe) avant de la saluer
     yield c.say('hero', 'Bonjour cheffe');
+    c.pose('olivier', 'idle');
+    c.pose('bastien', 'idle');
+  
     c.pose('hero', 'idle'); c.face('hero', 1);                               // puis se retourne vers le côté opposé
     c.add('chef', CHARS.chef, 1020, { face: -1, state: 'walk' });
+    c.mood('chef', 'angry');
     yield c.walk('chef', 540, 110);
     c.face('hero', 1);
-    yield c.say('chef', 'Stephan. Avant ton départ, j\'ai besoin du logigramme de la procédure de la procédure de crise. Au Complet cette fois...');
-    yield c.say('hero', 'Complet ? Il est tellement grand qu\'il est en morceaux dans tout l\'open space…');
-    yield c.say('chef', 'Alors il y a beaucoup de morceaux à retrouver. Bonne chance.');
+    
+    yield c.say('chef', 'Stephan. Avant ton départ, j\'ai besoin du logigramme de la procédure de crise. Au Complet cette fois...');
+    yield c.say('hero', 'Complet ? Il est tellement grand que j\'ai du les ranger aux quatre coins du GTAR');
+    yield c.say('chef', 'Bon courage et bonne chance avec le tourniquet infernal...');
     c.face('hero', -1);
     yield c.say('coline', 'Bon courage, Stephan !');
     // l'avion d'Arno revient en sens inverse… et se plante dans la tête du Chef
