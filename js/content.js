@@ -392,13 +392,13 @@ CUTS.j15_train_bastien = {
     c.mood('hero', undefined);
     const hero = c.actors.hero;
     yield c.wait(0.6);
-    c.sfx('blip'); c.caption('Le train ralentit… Prochain arrêt : GTAR.', 3.2);
+    c.sfx('blip'); c.caption('Le train ralentit… Prochain arrêt : Paris.', 3.2);
     c.sfx('spring');
     yield { t: 0, update(dt) { this.t += dt; const u = Math.min(1, this.t / 6); TRAIN.speed = 1 - ease(u); TRAIN.st = ease(Math.max(0, (u - 0.3) / 0.7)); hero.rot = Math.sin(Math.min(1, u * 1.25) * Math.PI) * 0.09; return u >= 1; } };
     hero.rot = 0; TRAIN.speed = 0; TRAIN.st = 1; c.sfx('stomp'); c.shake(0.35);
     yield c.wait(0.8);
     c.sfx('door'); c.sfx('blip');
-    yield c.caption('GTAR. Terminus, tout le monde descend !', 2.6);
+    yield c.caption('Paris. Terminus, tout le monde descend !', 2.6);
     yield c.fade(1, 0.8);
   },
 };

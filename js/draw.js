@@ -985,7 +985,7 @@ function trainStation(ctx, x, y, w, h, st, t) {
   rect(ctx, x, y + 70, w, 90, '#8b94a1'); for (let i = 0; i < 4; i++) { rr(ctx, x + 14 + i * 68, y + 84, 44, 40, 3, '#cfe3f3', '#5a6472', 2); }   // bâtiment de gare
   rect(ctx, x, y, w, 22, '#5a6472'); rect(ctx, x, y + 22, w, 5, '#3f4752');         // auvent du quai
   for (const px of [x + 26, x + w - 34]) rect(ctx, px, y + 22, 8, h - 56, '#5a6472');
-  rr(ctx, x + w / 2 - 62, y + 46, 124, 34, 5, '#2f7fd1', '#ffffff', 2.5); txt(ctx, 'GTAR', x + w / 2, y + 71, 22, '#ffffff', 'center', 'bold');
+  rr(ctx, x + w / 2 - 62, y + 46, 124, 34, 5, '#2f7fd1', '#ffffff', 2.5); txt(ctx, 'PARIS', x + w / 2, y + 71, 22, '#ffffff', 'center', 'bold');
   rect(ctx, x, y + h - 36, w, 36, '#aab3be'); rect(ctx, x, y + h - 36, w, 4, '#c9d0da'); rect(ctx, x, y + h - 30, w, 3, '#f2c230');        // quai + ligne jaune
   [[x + 78, '#c0392b'], [x + 128, '#3d6fa8'], [x + 196, '#3a8f6a']].forEach(([px, col], i) => {                  // voyageurs qui attendent
     const bob = Math.sin(t * 2 + i) * 1.2; ell(ctx, px, y + h - 38, 9, 3, 'rgba(0,0,0,.18)'); rr(ctx, px - 7, y + h - 74 + bob, 14, 32, 6, col); circ(ctx, px, y + h - 80 + bob, 7, '#f0c8a0');
